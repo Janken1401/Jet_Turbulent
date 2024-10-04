@@ -6,4 +6,4 @@ mat_fname = pjoin(data_dir, 'mean_1.mat')
 
 mat_contents = loadmat(mat_fname)
 truc = mat_contents['arr']
-print(truc.dtype)
+print(truc)
