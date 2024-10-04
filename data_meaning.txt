@@ -1,0 +1,11 @@
+Mean Flow : size(536, 69, 8) > 536 : noeuds nx ; 69 : noeud nr ; 8 : grandeurs
+
+Grandeurs : x/D ; r/D; rho/rho0 ; ux/u0 ; ur/u0; utheta/u0 ; T/((y - 1)T0) ; p/(yp0)
+
+D'où mean[0][0][:] correspondent au champ moyen au noeuds (0,0)
+
+Rans69 : grille suivant r
+
+Mach : Mach de référence
+
+info.dat : Les valeurs de référence rangées par colonnes pour chaque cas RANS
