@@ -3,13 +3,15 @@ from scipy.io import loadmat
 import numpy as np
 
 data_dir = pjoin('../Data', 'MeanFlow')
-mat_fname = pjoin(data_dir, 'mean_1.mat')
+def get_mean_field_rans(file):
+    mat_fname = pjoin(data_dir, 'mean_1.mat')
 
-mat_contents = loadmat(mat_fname)
+    mat_contents = loadmat(mat_fname)
 
-header = mat_contents['__version__']
+    header = mat_contents['__version__']
 
-truc = mat_contents['arr']
-print(truc.shape)
+    truc = mat_contents['arr']
+    print(truc.shape)
 
-print(truc[535][68])
+    print(truc[-1][-1])
+
