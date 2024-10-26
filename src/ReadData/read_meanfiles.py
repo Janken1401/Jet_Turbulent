@@ -2,7 +2,7 @@ from os.path import dirname, join as pjoin
 from scipy.io import loadmat
 import numpy as np
 
-data_dir = pjoin('../Data', 'MeanFlow')
+data_dir = pjoin('../../Data', 'MeanFlow')
 def get_mean_field_rans(file):
     mat_fname = pjoin(data_dir, 'mean_1.mat')
 
