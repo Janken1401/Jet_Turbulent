@@ -1,24 +1,26 @@
 import pandas as pd
-from os.path import join as pjoin
+from src.toolbox.constantes import DIR_DATA
 
-from src.toolbox.constantes import __DIR_DATA__
+path_info = DIR_DATA / 'info.dat'
+path_mach = DIR_DATA / 'Mach.dat'
 
-path_info = pjoin(__DIR_DATA__, 'info.dat')
-path_mach = pjoin(__DIR_DATA__, 'Mach.dat')
 
 def get_reference_values():
-    return pd.read_csv(path_info, delimiter=r'\s+', comment='#', names=["ux", "rho", "T", "P"])
+    return pd.read_csv(path_info,
+                       delimiter=r'\s+',
+                       skiprows=1,
+                       names=["ux", "rho", "T", "P"])
 
 
 def get_mach_reference():
-
     columns = ['Id', 'Ma']
-    mach_df = pd.read_csv(path_mach, delimiter=r'\s+', comment='#', header=None, names=columns)
+    mach_df = pd.read_csv(path_mach, delimiter=r'\s+', header=None, names=columns)
 
     return mach_df
 
-mach = get_mach_reference()
 
+mach = get_mach_reference()
+print(mach)
 ref_quantities = get_reference_values()
 
 
