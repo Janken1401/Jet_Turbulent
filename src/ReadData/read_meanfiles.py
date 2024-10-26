@@ -1,17 +1,35 @@
-from os.path import dirname, join as pjoin
 from scipy.io import loadmat
-import numpy as np
 
-data_dir = pjoin('../../Data', 'MeanFlow')
-def get_mean_field_rans(file):
-    mat_fname = pjoin(data_dir, 'mean_1.mat')
+from src.toolbox.path_directories import DIR_MEAN
 
-    mat_contents = loadmat(mat_fname)
+def get_mean_field_rans(id_mach):
+    """
 
-    header = mat_contents['__version__']
+    Parameters
+    ----------
+    id_mach
+        the index of the Mach number referenced in the Mach.dat
 
-    truc = mat_contents['arr']
-    print(truc.shape)
+    Returns
+    -------
 
-    print(truc[-1][-1])
+
+    """
+
+    mean_files = DIR_MEAN.glob('*.mat')
+
+    # Sort files by extracting the numeric part of the filename
+    sorted_mean_files = sorted(mean_files, key=lambda file: int(file.stem.split('_')[-1]))
+
+    # Return a dictionary with {i: mean_i.mat} structure
+    return sorted_mean_files[id_mach - 1]
+
+
+mean_file = loadmat(DIR_MEAN / 'mean_1.mat')
+mean_field = mean_file['arr']
+
+
+
+
+
 
