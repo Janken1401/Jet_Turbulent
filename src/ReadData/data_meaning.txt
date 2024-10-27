@@ -11,10 +11,10 @@ Grandeurs : x/D ; r/D; rho/rho0 ; ux/u0 ; ur/u0; utheta/u0 ; T/((y - 1)T0) ; p/(
 
 D'où mean[0][0][:] correspondent au champ moyenné en theta au noeuds (Nx = 0, Nr = 0)
 
+LES GRANDEURS SONT DEJA ADIMENSIONNE
 
 PSE
 --------
-Grandeurs adimensionnés
 
 int(alpha) intégrale de alpha
 

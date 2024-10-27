@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy.io import loadmat
-
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 from src.toolbox.path_directories import DIR_MEAN
 
 def get_mean_file(id_mach):
@@ -33,6 +34,22 @@ data = mean_file['arr']
 Nx, Nr, Nvalues = data.shape
 
 data_dict = {name: pd.DataFrame(data[:, :, i], index=range(Nx), columns=range(Nr)) for i, name in enumerate(names)}
+x = data_dict['x']
+x = x
+
+r = data_dict['r']
+rho = data_dict['rho']
+ux = data_dict['ux']
+ur = data_dict['ur']
+u_theta = data_dict['u_theta']
+T = data_dict['T']
+P = data_dict['P']
+
+plt.contourf(x <= 10,r <= 3, P)
+plt.show()
+
+
+
 
 
 
