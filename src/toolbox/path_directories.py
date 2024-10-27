@@ -7,3 +7,4 @@ DIR_STABILITY = DIR_DATA / 'Stability'
 DIR_OUT = BASE_DIR / 'Output'
 
 CASE_NUMBER = 10
+RANS_FILES = {i: f'mean_{i}.mat' for i in range(1,CASE_NUMBER+1)}
