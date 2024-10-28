@@ -1,0 +1,33 @@
+info.dat : Les valeurs de référence rangées par colonnes pour chaque cas RANS/Mach pour x = r = 0
+Mach : Mach de référence
+Rans69 : grille suivant r
+
+RANS
+----
+
+Mean Flow : size(536, 69, 8) > 536 : noeuds nx ; 69 : noeud nr ; 8 : grandeurs
+
+Grandeurs : x/D ; r/D; rho/rho0 ; ux/u0 ; ur/u0; utheta/u0 ; T/((y - 1)T0) ; p/(yp0)
+
+D'où mean[0][0][:] correspondent au champ moyenné en theta au noeuds (Nx = 0, Nr = 0)
+
+LES GRANDEURS SONT DEJA ADIMENSIONNE
+
+PSE
+--------
+
+int(alpha) intégrale de alpha
+
+pertpse : q(x,t) => q' = q * f(theta, w, t)
+
+St = {0.4, 1.1}
+
+epsilon_q = {0.01, 0.1}
+
+t est calculé en fonction de St / omega
+
+La grille est régulière suivant x.
+
+La grille suivant r se trouvent dans les fichiers des champs de perturbations mais aussi dans le fichier RANS69pt.dat.
+Il est possible que ce soit la même grille suivant r que celles dans lesfichiers RANS, mais il faut le vérifier par
+un calcul d'erreur ou un graphique. Cela simplifierait les interpolations ultérieures
