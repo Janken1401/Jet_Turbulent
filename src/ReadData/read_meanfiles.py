@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
 from toolbox.fig_parameters import RANS_FIGSIZE
@@ -60,7 +61,7 @@ class ransField:
 
         Returns
         -------
-        x_sub: DataFrame
+        x_sub: Dataframe
             the x values in the wanted domain
         r_sub: DataFrame
             the r values in the wanted domain
@@ -74,42 +75,58 @@ class ransField:
         x_sub = self.x.loc[x_mask, r_mask].values
         r_sub = self.r.loc[x_mask, r_mask].values
         value_sub = value.loc[x_mask, r_mask].values
-        return x_sub, r_sub, value_sub
+        return pd.DataFrame(x_sub), pd.DataFrame(r_sub), pd.DataFrame(value_sub)
 
     def plot_x(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.x, x_max, r_max)
+        title = r'$\hat{x}$'
+        self.plot_value_in_field(self.x, title, x_max, r_max)
 
     def plot_r(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.r, x_max, r_max)
+        title = r'$\hat{r}$'
+        self.plot_value_in_field(self.r, title, x_max, r_max)
 
     def plot_rho(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.rho, x_max, r_max)
+        title = r'$\hat{\rho}$'
+        self.plot_value_in_field(self.rho, title, x_max, r_max)
 
     def plot_ux(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.ux, x_max, r_max)
+        title = r'$\hat{u_x}$'
+        self.plot_value_in_field(self.ux, title, x_max, r_max)
 
     def plot_ur(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.ur, x_max, r_max)
+        title = r'$\hat{u_r}$'
+        self.plot_value_in_field(self.ur, title, x_max, r_max)
 
     def plot_ut(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.ut, x_max, r_max)
+        title = r'$\hat{u_\theta}$'
+        self.plot_value_in_field(self.ut, title, x_max, r_max)
 
     def plot_T(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.T, x_max, r_max)
+        title = r'$\hat{T}$'
+        self.plot_value_in_field(self.T, title, x_max, r_max)
 
     def plot_p(self, x_max=10, r_max=3):
-        self.plot_value_in_field(self.p, x_max, r_max)
+        title = r'$\hat{p}$'
+        self.plot_value_in_field(self.p, title, x_max, r_max)
 
-    def plot_value_in_field(self, value, x_max=10, r_max=3):
+    def plot_value_in_field(self, value, title='', x_max=10, r_max=3):
         x, r, value = self.get_value_in_field(value, x_max, r_max)
         plt.style.use('ggplot')
-        plt.figure(figsize=RANS_FIGSIZE, layout='constrained')
-        plt.contourf(x, r, value, levels=100, cmap='coolwarm')
+        fig, ax = plt.subplots(figsize=RANS_FIGSIZE, layout='constrained')
+        cs = ax.contourf(x, r, value, levels=100, cmap='coolwarm')
         plt.xlabel('x/D')
         plt.ylabel('r/D')
-        plt.title(r'\hat{{self.value}}'.format(value))
-        plt.colorbar()
+        tick_spacing = 1
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
+        ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
+        ax.set_title(title)
+        cbar = fig.colorbar(cs)
+        tick_locator = ticker.MaxNLocator(nbins=5)
+        cbar.locator = tick_locator
+        cbar.set_ticks(ticks=tick_locator, vmin=value.min(), vmax=value.max())
+        cbar.update_ticks()
         plt.show()
+
 
 rans_1 = ransField(1)
 
