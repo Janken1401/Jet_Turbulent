@@ -46,8 +46,7 @@ def get_mach_reference():
         3    4  0.98350
         4    5  0.98544
     """
-    columns = ['ID', 'Ma']
-    mach_df = pd.read_csv(path_mach, delimiter=r'\s+', header=None, names=columns)
+    mach_df = pd.read_csv(path_mach, delimiter=r'\s+', header=None, names=['ID', 'Ma'])
 
     return mach_df
 
