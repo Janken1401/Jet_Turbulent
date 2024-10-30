@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
+
+from src.ReadData.read_mach import get_mach_reference
 from src.toolbox.path_directories import DIR_DATA
 from src.toolbox.dimless_reference_values import gamma, R
 
 path_info = DIR_DATA / 'info.dat'
-path_mach = DIR_DATA / 'Mach.dat'
 
 
 def get_reference_values():
@@ -31,25 +32,6 @@ def get_reference_values():
                        names=["ux", "rho", "T", "P"])
 
 
-def get_mach_reference():
-    """Retrieve all the Mach numbers
-
-    Returns
-    -------
-    DataFrame
-        a DataFrame containing all the Mach numbers used. Each values of Mach numbers are associated
-        with an ID such as :
-            ID       Ma
-        0    1  0.97335
-        1    2  0.97479
-        2    3  0.98081
-        3    4  0.98350
-        4    5  0.98544
-    """
-    mach_df = pd.read_csv(path_mach, delimiter=r'\s+', header=None, names=['ID', 'Ma'])
-
-    return mach_df
-
 def compare_mach():
     """
     Compare the reference Mach number with the Mach number computed
@@ -70,4 +52,3 @@ def compare_mach():
 
 
 error = compare_mach()
-
