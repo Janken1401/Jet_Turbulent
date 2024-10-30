@@ -31,3 +31,7 @@ La grille est régulière suivant x.
 La grille suivant r se trouvent dans les fichiers des champs de perturbations mais aussi dans le fichier RANS69pt.dat.
 Il est possible que ce soit la même grille suivant r que celles dans lesfichiers RANS, mais il faut le vérifier par
 un calcul d'erreur ou un graphique. Cela simplifierait les interpolations ultérieures
+
+INTERPOLATION
+----------------
+

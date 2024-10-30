@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from src.toolbox.path_directories import DIR_DATA
+
+from src.toolbox.path_directories import DIR_DATA, DIR_STABILITY
 from src.ReadData.read_info import get_mach_reference
-from toolbox.path_directories import DIR_STABILITY
 
 path_mach = DIR_DATA / 'Mach.dat'
-
 
 class perturbationField:
     def __init__(self, St, ID_MACH):
@@ -17,11 +16,13 @@ class perturbationField:
         self.ID_MACH = ID_MACH
         self.mach = get_mach_reference().loc[self.ID_MACH - 1]
         dir_St = DIR_STABILITY / "St{:02d}".format(int(10 * self.St))
-        dir_field = dir_St / f'FrancCase_{self.ID_MACH}'
+        dir_field = dir_St / 'Field' / f'FrancCase_{self.ID_MACH}'
         self.file_perturbation = dir_field / f'pertpse_FrancCase_{self.ID_MACH}.dat'
-        self.stability_field = self._get_stability_field()
+        self.pert_values= self._get_perturbation_field()
 
-    def _get_stability_field(self):
+
+
+    def _get_perturbation_field(self):
         """Retrieve Results from stability  fields
 
         Returns
