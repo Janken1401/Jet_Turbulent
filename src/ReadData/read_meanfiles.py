@@ -5,7 +5,7 @@ import matplotlib.ticker as ticker
 
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
 from toolbox.fig_parameters import RANS_FIGSIZE
-from src.ReadData.read_info import get_mach_reference
+from src.ReadData.read_mach import get_mach_reference
 
 rans_value_names = ['x', 'r', 'rho', 'ux', 'ur', 'ut', 'T', 'p']
 
@@ -18,32 +18,48 @@ class ransField:
         ----------
         ID_MACH
         """
+        if not isinstance(ID_MACH, int):
+            raise TypeError('ID_MACH must be a int')
+
         self.ID_MACH = ID_MACH
         rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
 
         self.mach = get_mach_reference().loc[self.ID_MACH - 1]
         self.rans_field_array = loadmat(rans_file)['arr']
-        self.Nx, self.Nr, self.Nvalues = self.rans_field_array.shape
-        self.rans_field = self.get_rans_values()
+        self.Nx, self.Nr, self.Nvalues = self.rans_field_array.shape # 536, 69, 8
+        self.rans_field = self._get_rans_field()
         self.x = self.rans_field['x']
         self.r = self.rans_field['r']
-        self.rho = self.rans_field['rho']
-        self.ux = self.rans_field['ux']
-        self.ur = self.rans_field['ur']
-        self.ut = self.rans_field['ut']
-        self.T = self.rans_field['T']
-        self.p = self.rans_field['p']
 
-    def get_rans_values(self):
-        """
-        Retrieve values of the RANS mean field based on the mach case selected
+    def plot_mean_value(self, value, x_max=10, r_max=3):
+        if value not in self.rans_field.keys():
+            raise ValueError('value must be either x, r, rho, ux, ur, ut, T or p')
+        if not isinstance(x_max, (int, float)) or not isinstance(r_max, (int, float)):
+            raise TypeError('x_max and r_max must be an int or a float')
 
-        Returns
-        -------
-        Dict: a dict containing DataFrame for each value computed in the RANS field
-        """
-        return {name: pd.DataFrame(self.rans_field_array[:, :, i], index=range(self.Nx), columns=range(self.Nr))
-                for i, name in enumerate(rans_value_names)}
+        titles = {'x': r'$\hat{x}$', 'r': r'$\hat{r}$', 'rho': r'$\hat{\rho}$',
+                  'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_\theta}$', 'ut': r'$\hat{u_\theta}$',
+                  'T': r'$\hat{T}$', 'P': r'$\hat{p}$'}
+
+        self.plot_value_in_field(value, titles[value], x_max, r_max)
+
+    def plot_value_in_field(self, value, title='', x_max=10, r_max=3):
+        x, r, value = self.get_value_in_field(value, x_max, r_max)
+        plt.style.use('ggplot')
+        fig, ax = plt.subplots(figsize=RANS_FIGSIZE, layout='constrained')
+        cs = ax.contourf(x, r, value, levels=100, cmap='coolwarm')
+        plt.xlabel('x/D')
+        plt.ylabel('r/D')
+        tick_spacing = 1
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
+        ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
+        ax.set_title(title)
+        cbar = fig.colorbar(cs)
+        tick_locator = ticker.MaxNLocator(nbins=5)
+        cbar.locator = tick_locator
+        cbar.set_ticks(ticks=tick_locator, vmin=value.min(), vmax=value.max())
+        cbar.update_ticks()
+        plt.show()
 
     def get_value_in_field(self, value, x_max=10, r_max=3):
         """
@@ -70,64 +86,20 @@ class ransField:
         """
         x_mask = (self.x.iloc[:, 0] >= 0) & (self.x.iloc[:, 0] <= x_max)
         r_mask = (self.r.iloc[0, :] >= 0) & (self.r.iloc[0, :] <= r_max)
-
+        value = self.rans_field[value]
         # Apply the masks to select the subarray
         x_sub = self.x.loc[x_mask, r_mask].values
         r_sub = self.r.loc[x_mask, r_mask].values
         value_sub = value.loc[x_mask, r_mask].values
         return pd.DataFrame(x_sub), pd.DataFrame(r_sub), pd.DataFrame(value_sub)
 
-    def plot_x(self, x_max=10, r_max=3):
-        title = r'$\hat{x}$'
-        self.plot_value_in_field(self.x, title, x_max, r_max)
+    def _get_rans_field(self):
+        """
+        Retrieve values of the RANS mean field based on the mach case selected
 
-    def plot_r(self, x_max=10, r_max=3):
-        title = r'$\hat{r}$'
-        self.plot_value_in_field(self.r, title, x_max, r_max)
-
-    def plot_rho(self, x_max=10, r_max=3):
-        title = r'$\hat{\rho}$'
-        self.plot_value_in_field(self.rho, title, x_max, r_max)
-
-    def plot_ux(self, x_max=10, r_max=3):
-        title = r'$\hat{u_x}$'
-        self.plot_value_in_field(self.ux, title, x_max, r_max)
-
-    def plot_ur(self, x_max=10, r_max=3):
-        title = r'$\hat{u_r}$'
-        self.plot_value_in_field(self.ur, title, x_max, r_max)
-
-    def plot_ut(self, x_max=10, r_max=3):
-        title = r'$\hat{u_\theta}$'
-        self.plot_value_in_field(self.ut, title, x_max, r_max)
-
-    def plot_T(self, x_max=10, r_max=3):
-        title = r'$\hat{T}$'
-        self.plot_value_in_field(self.T, title, x_max, r_max)
-
-    def plot_p(self, x_max=10, r_max=3):
-        title = r'$\hat{p}$'
-        self.plot_value_in_field(self.p, title, x_max, r_max)
-
-    def plot_value_in_field(self, value, title='', x_max=10, r_max=3):
-        x, r, value = self.get_value_in_field(value, x_max, r_max)
-        plt.style.use('ggplot')
-        fig, ax = plt.subplots(figsize=RANS_FIGSIZE, layout='constrained')
-        cs = ax.contourf(x, r, value, levels=100, cmap='coolwarm')
-        plt.xlabel('x/D')
-        plt.ylabel('r/D')
-        tick_spacing = 1
-        ax.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
-        ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
-        ax.set_title(title)
-        cbar = fig.colorbar(cs)
-        tick_locator = ticker.MaxNLocator(nbins=5)
-        cbar.locator = tick_locator
-        cbar.set_ticks(ticks=tick_locator, vmin=value.min(), vmax=value.max())
-        cbar.update_ticks()
-        plt.show()
-
-
-rans_1 = ransField(1)
-
-rans_1.plot_p()
+        Returns
+        -------
+        Dict: a dict containing DataFrame for each value computed in the RANS field
+        """
+        return {name: pd.DataFrame(self.rans_field_array[:, :, i], index=range(self.Nx), columns=range(self.Nr))
+                for i, name in enumerate(rans_value_names)}
