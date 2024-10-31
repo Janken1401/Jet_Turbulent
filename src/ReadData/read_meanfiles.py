@@ -34,28 +34,27 @@ class ransField:
         self.St = St
         self.mach = get_mach_reference().loc[self.ID_MACH - 1]
         self.rans_values = self._get_rans_values()
-        self.rans_x = self.rans_values['x']
-        self.rans_r = self.rans_values['r']
+        self.rans_x_grid = self.rans_values['x'].to_numpy()[:, 0] # array of x-values for the rans grid
 
         pert_field = perturbationField(self.St, self.ID_MACH)
-        self.pse_x = pert_field.pert_values['x']
+        self.pse_x_grid = pert_field.pert_values['x']
 
     def interpolate_grid(self):
         rans_pse_values = self.convert_to_pse_reference()
         rans_pse_interpolated = {}
 
         for var_name in ('ux','ur','ut','P', 'rho'):
-                interpolated_grid = np.zeros((len(self.pse_x), self.Nr))
+                interpolated_grid = np.zeros((len(self.pse_x_grid), self.Nr))
 
                 for i, r_point in enumerate(r_grid):
                     rans_values_at_x= rans_pse_values[var_name].iloc[:, i]
 
-                    spline = CubicSpline(self.rans_x[i], rans_values_at_x)
+                    spline = CubicSpline(self.rans_x_grid[i], rans_values_at_x)
 
-                    interpolated_grid[:, i] = spline(self.pse_x)
+                    interpolated_grid[:, i] = spline(self.pse_x_grid)
 
                 rans_pse_interpolated[var_name] = pd.DataFrame(interpolated_grid,
-                                                               index=self.pse_x, columns=self.rans_r.columns)
+                                                               index=self.pse_x_grid, columns=r_grid)
 
         return rans_pse_interpolated
 
@@ -73,13 +72,12 @@ class ransField:
         ref_values = get_reference_values().iloc[self.ID_MACH - 1]
         u_ref = ref_values['ux']
         rans_dim = self.rans_dimensionalization()
-        rans_pse = {}
-        rans_pse['ux'] = rans_dim['ux'] / u_ref
-        rans_pse['ur'] = rans_dim['ur'] / u_ref
-        rans_pse['ut'] = rans_dim['ut'] / u_ref
-        rans_pse['T'] = rans_dim['T'] / ref_values['T']
-        rans_pse['P'] = rans_dim['P'] / ref_values['P']
-        rans_pse['rho'] = rans_dim['rho'] / ref_values['rho']
+        rans_pse = {'ux': rans_dim['ux'] / u_ref,
+                    'ur': rans_dim['ur'] / u_ref,
+                    'ut': rans_dim['ut'] / u_ref,
+                    'T': rans_dim['T'] / ref_values['T'],
+                    'P': rans_dim['P'] / ref_values['P'],
+                    'rho': rans_dim['rho'] / ref_values['rho']}
 
         return rans_pse
 
@@ -93,13 +91,12 @@ class ransField:
             contains DataFrame of the rans field except for x and r
         """
 
-        rans_dim = {}
-        rans_dim['ux'] = self.rans_values['ux'] * c_0
-        rans_dim['ur'] = self.rans_values['ur'] * c_0
-        rans_dim['ut'] = self.rans_values['ut'] * c_0
-        rans_dim['T'] = self.rans_values['T'] * T_0
-        rans_dim['P'] = self.rans_values['P'] * p_0
-        rans_dim['rho'] = self.rans_values['rho'] * rho_0
+        rans_dim = {'ux': self.rans_values['ux'] * c_0,
+                    'ur': self.rans_values['ur'] * c_0,
+                    'ut': self.rans_values['ut'] * c_0,
+                    'T': self.rans_values['T'] * T_0,
+                    'P': self.rans_values['P'] * p_0,
+                    'rho': self.rans_values['rho'] * rho_0}
 
         return rans_dim
 
@@ -148,7 +145,7 @@ class ransField:
         cbar.update_ticks()
         plt.show()
 
-    def get_value_in_field(self, value, x_max=10, r_max=3):
+    def get_value_in_field(self, value, grid='PSE', x_max=10, r_max=3):
         """
         Return the value in the wanted domain
 
@@ -171,11 +168,17 @@ class ransField:
         value_sub: DataFrame
             the values in the wanted domain
         """
-        x_mask = (self.rans_x.iloc[:, 0] >= 0) & (self.rans_x.iloc[:, 0] <= x_max)
+        match grid:
+            case 'RANS':
+                x_grid = self.rans_x_grid
+
+        x_sub = x_grid[0 <= x_grid <= x_max]
+        r_sub = r_grid[0 <= r_grid <= r_max]
+        x_mask = (self.rans_x_grid.iloc[:, 0] >= 0) & (self.rans_x.iloc[:, 0] <= x_max)
         r_mask = (self.rans_r.iloc[0, :] >= 0) & (self.rans_r.iloc[0, :] <= r_max)
         value = self.rans_values[value]
         # Apply the masks to select the subarray
-        x_sub = self.rans_x.loc[x_mask, r_mask]
+        x_sub = self.rans_x.loc[x_mask, r_mask].to_n
         r_sub = self.rans_r.loc[x_mask, r_mask]
         value_sub = value.loc[x_mask, r_mask]
         return x_sub, r_sub, value_sub
@@ -196,7 +199,4 @@ class ransField:
         return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(self.Nx), columns=range(self.Nr))
                 for i, name in enumerate(rans_value_names)}
 
-pert_field = perturbationField(St=0.4, ID_MACH=1)
-rans_field = ransField(ID_MACH=1, St=0.4)
-rans_values = rans_field.rans_values
-rans_interpolated  = rans_field.interpolate_grid()
+
