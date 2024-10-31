@@ -1,7 +1,9 @@
 import pandas as pd
+from scipy.interpolate import CubicSpline
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import numpy as np
 
 from ReadData.read_info import get_reference_values
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
@@ -9,6 +11,8 @@ from toolbox.fig_parameters import RANS_FIGSIZE
 from src.ReadData.read_mach import get_mach_reference
 from src.ReadData.read_radius import get_r_grid
 from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
+
+from src.ReadData.read_stability_field import perturbationField
 
 rans_value_names = ['x', 'r', 'rho', 'ux', 'ur', 'ut', 'T', 'P']
 r_grid = get_r_grid()
@@ -27,15 +31,34 @@ class ransField:
             raise TypeError('ID_MACH must be a int')
 
         self.ID_MACH = ID_MACH
-
+        self.St = St
         self.mach = get_mach_reference().loc[self.ID_MACH - 1]
         self.rans_values = self._get_rans_values()
         self.rans_x = self.rans_values['x']
         self.rans_r = self.rans_values['r']
 
+        pert_field = perturbationField(self.St, self.ID_MACH)
+        self.pse_x = pert_field.pert_values['x']
 
     def interpolate_grid(self):
-        pass
+        rans_pse_values = self.convert_to_pse_reference()
+        rans_pse_interpolated = {}
+
+        for var_name in ('ux','ur','ut','P', 'rho'):
+                interpolated_grid = np.zeros((len(self.pse_x), self.Nr))
+
+                for i, r_point in enumerate(r_grid):
+                    rans_values_at_x= rans_pse_values[var_name].iloc[:, i]
+
+                    spline = CubicSpline(self.rans_x[i], rans_values_at_x)
+
+                    interpolated_grid[:, i] = spline(self.pse_x)
+
+                rans_pse_interpolated[var_name] = pd.DataFrame(interpolated_grid,
+                                                               index=self.pse_x, columns=self.rans_r.columns)
+
+        return rans_pse_interpolated
+
 
 
     def convert_to_pse_reference(self):
@@ -51,11 +74,12 @@ class ransField:
         u_ref = ref_values['ux']
         rans_dim = self.rans_dimensionalization()
         rans_pse = {}
-        rans_pse['ux_pse'] = rans_dim['ux_dim'] / u_ref
-        rans_pse['ur_pse'] = rans_dim['ur_dim'] / u_ref
-        rans_pse['ut_pse'] = rans_dim['ut_dim'] / u_ref
-        rans_pse['T_pse'] = rans_dim['T_dim'] / ref_values['T']
-        rans_pse['P_pse'] = rans_dim['P_dim'] / ref_values['P']
+        rans_pse['ux'] = rans_dim['ux'] / u_ref
+        rans_pse['ur'] = rans_dim['ur'] / u_ref
+        rans_pse['ut'] = rans_dim['ut'] / u_ref
+        rans_pse['T'] = rans_dim['T'] / ref_values['T']
+        rans_pse['P'] = rans_dim['P'] / ref_values['P']
+        rans_pse['rho'] = rans_dim['rho'] / ref_values['rho']
 
         return rans_pse
 
@@ -70,11 +94,12 @@ class ransField:
         """
 
         rans_dim = {}
-        rans_dim['ux_dim'] = self.rans_values['ux'] * c_0
-        rans_dim['ur_dim'] = self.rans_values['ur'] * c_0
-        rans_dim['ut_dim'] = self.rans_values['ut'] * c_0
-        rans_dim['T_dim'] = self.rans_values['T'] * T_0
-        rans_dim['P_dim'] = self.rans_values['P'] * p_0
+        rans_dim['ux'] = self.rans_values['ux'] * c_0
+        rans_dim['ur'] = self.rans_values['ur'] * c_0
+        rans_dim['ut'] = self.rans_values['ut'] * c_0
+        rans_dim['T'] = self.rans_values['T'] * T_0
+        rans_dim['P'] = self.rans_values['P'] * p_0
+        rans_dim['rho'] = self.rans_values['rho'] * rho_0
 
         return rans_dim
 
@@ -91,6 +116,21 @@ class ransField:
         self.plot(value, titles[value], x_max, r_max)
 
     def plot(self, value, title='', x_max=10, r_max=3):
+        """
+
+        Parameters
+        ----------
+        value: str
+            value to plot. Avaible : 'ux', 'ur', 'ut', 'T', 'P'
+        title
+        x_max: int or float - optional
+        r_max: int or float - optional
+            provide the limit of the domain to plot the values
+
+        Returns
+        -------
+        None
+        """
         x, r, value = self.get_value_in_field(value, x_max, r_max)
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=RANS_FIGSIZE, layout='constrained')
@@ -114,9 +154,9 @@ class ransField:
 
         Parameters
         ----------
-        value: DataFrame
+        value: 'str''
             values to retrieve in the wanted domain.
-            Value available : x, r, rho, ux, ur, ut, T, p, Ma
+            Value available : x, r, rho, ux, ur, ut, T, p
         x_max: int - optional
             maximum value on the x direction
         r_max: int - optional
@@ -155,3 +195,8 @@ class ransField:
 
         return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(self.Nx), columns=range(self.Nr))
                 for i, name in enumerate(rans_value_names)}
+
+pert_field = perturbationField(St=0.4, ID_MACH=1)
+rans_field = ransField(ID_MACH=1, St=0.4)
+rans_values = rans_field.rans_values
+rans_interpolated  = rans_field.interpolate_grid()
