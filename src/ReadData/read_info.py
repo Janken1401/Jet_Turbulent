@@ -15,7 +15,7 @@ def get_reference_values():
     -------
     DataFrame
         a DataFrame containing all values for all the Mach numbers like :
-            ux       rho           T              P
+            ux          rho       T            P
         0   311.529138  1.576135  254.860326  115326.441784
         1   311.916903  1.574279  254.740191  115136.336935
         2   313.535065  1.566509  254.236346  114341.477460
