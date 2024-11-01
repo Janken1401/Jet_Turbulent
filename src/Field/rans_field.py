@@ -1,17 +1,15 @@
 import pandas as pd
-from scipy.interpolate import CubicSpline
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import numpy as np
 
 from ReadData.read_info import get_reference_values
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
 from toolbox.fig_parameters import RANS_FIGSIZE
-from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0, D
+from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
 
 
-class ransField:
+class Ransfield:
     titles = {'x': r'$\hat{x}$', 'r': r'$\hat{r}$', 'rho': r'$\hat{\rho}$',
               'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_\theta}$', 'ut': r'$\hat{u_\theta}$',
               'T': r'$\hat{T}$', 'P': r'$\hat{p}$'}
@@ -76,12 +74,10 @@ class ransField:
 
     def plot(self, name_value, x_max=10, r_max=3):
         """
-
         Parameters
         ----------
-        value: str
-            value to plot. Avaible : 'ux', 'ur', 'ut', 'T', 'P'
-        title
+        name_value: str
+            value to plot. Available : 'ux', 'ur', 'ut', 'T', 'P'
         x_max: int or float - optional
         r_max: int or float - optional
             provide the limit of the domain to plot the values
