@@ -8,57 +8,26 @@ import numpy as np
 from ReadData.read_info import get_reference_values
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
 from toolbox.fig_parameters import RANS_FIGSIZE
-from src.ReadData.read_mach import get_mach_reference
 from src.ReadData.read_radius import get_r_grid
 from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
-
-from src.ReadData.read_stability_field import perturbationField
 
 rans_value_names = ['x', 'r', 'rho', 'ux', 'ur', 'ut', 'T', 'P']
 r_grid = get_r_grid()
 
+
 class ransField:
-    def __init__(self, ID_MACH, St=0.4):
+    def __init__(self, ID_MACH=1):
         """
         Parameters
         ----------
         ID_MACH : int
             ID of the Mach reference
-        St : int or float
-            Strouhal number
         """
         if not isinstance(ID_MACH, int):
             raise TypeError('ID_MACH must be a int')
 
         self.ID_MACH = ID_MACH
-        self.St = St
-        self.mach = get_mach_reference().loc[self.ID_MACH - 1]
-        self.rans_values = self._get_rans_values()
-        self.rans_x_grid = self.rans_values['x'].to_numpy()[:, 0] # array of x-values for the rans grid
-
-        pert_field = perturbationField(self.St, self.ID_MACH)
-        self.pse_x_grid = pert_field.pert_values['x']
-
-    def interpolate_grid(self):
-        rans_pse_values = self.convert_to_pse_reference()
-        rans_pse_interpolated = {}
-
-        for var_name in ('ux','ur','ut','P', 'rho'):
-                interpolated_grid = np.zeros((len(self.pse_x_grid), self.Nr))
-
-                for i, r_point in enumerate(r_grid):
-                    rans_values_at_x= rans_pse_values[var_name].iloc[:, i]
-
-                    spline = CubicSpline(self.rans_x_grid[i], rans_values_at_x)
-
-                    interpolated_grid[:, i] = spline(self.pse_x_grid)
-
-                rans_pse_interpolated[var_name] = pd.DataFrame(interpolated_grid,
-                                                               index=self.pse_x_grid, columns=r_grid)
-
-        return rans_pse_interpolated
-
-
+        self.rans_values = self.get_rans_values()
 
     def convert_to_pse_reference(self):
         """
@@ -71,17 +40,19 @@ class ransField:
         """
         ref_values = get_reference_values().iloc[self.ID_MACH - 1]
         u_ref = ref_values['ux']
-        rans_dim = self.rans_dimensionalization()
-        rans_pse = {'ux': rans_dim['ux'] / u_ref,
-                    'ur': rans_dim['ur'] / u_ref,
-                    'ut': rans_dim['ut'] / u_ref,
-                    'T': rans_dim['T'] / ref_values['T'],
-                    'P': rans_dim['P'] / ref_values['P'],
-                    'rho': rans_dim['rho'] / ref_values['rho']}
+        rans_dim = self.dimensionalized()
+        rans_pse = {
+                'ux': rans_dim['ux'] / u_ref,
+                'ur': rans_dim['ur'] / u_ref,
+                'ut': rans_dim['ut'] / u_ref,
+                'T': rans_dim['T'] / ref_values['T'],
+                'P': rans_dim['P'] / ref_values['P'],
+                'rho': rans_dim['rho'] / ref_values['rho']
+        }
 
         return rans_pse
 
-    def rans_dimensionalization(self):
+    def dimensionalized(self):
         """
         Re-dimensionalize the RANS field before set it to the PSE reference
 
@@ -90,18 +61,20 @@ class ransField:
         rans_dim : dict
             contains DataFrame of the rans field except for x and r
         """
-
-        rans_dim = {'ux': self.rans_values['ux'] * c_0,
-                    'ur': self.rans_values['ur'] * c_0,
-                    'ut': self.rans_values['ut'] * c_0,
-                    'T': self.rans_values['T'] * T_0,
-                    'P': self.rans_values['P'] * p_0,
-                    'rho': self.rans_values['rho'] * rho_0}
+        rans_values = self.get_rans_values()
+        rans_dim = {
+                'ux': rans_values['ux'] * c_0,
+                'ur': rans_values['ur'] * c_0,
+                'ut': rans_values['ut'] * c_0,
+                'T': rans_values['T'] * (gamma - 1) * T_0,
+                'P': rans_values['P'] * gamma * p_0,
+                'rho': rans_values['rho'] * rho_0
+        }
 
         return rans_dim
 
     def plot_mean_value(self, value, x_max=10, r_max=3):
-        if value not in self.rans_values.keys():
+        if value not in rans_value_names:
             raise ValueError('value must be either x, r, rho, ux, ur, ut, T or P')
         if not isinstance(x_max, (int, float)) or not isinstance(r_max, (int, float)):
             raise TypeError('x_max and r_max must be an int or a float')
@@ -110,6 +83,7 @@ class ransField:
                   'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_\theta}$', 'ut': r'$\hat{u_\theta}$',
                   'T': r'$\hat{T}$', 'P': r'$\hat{p}$'}
 
+        value = self.get_rans_values()[value]
         self.plot(value, titles[value], x_max, r_max)
 
     def plot(self, value, title='', x_max=10, r_max=3):
@@ -118,7 +92,7 @@ class ransField:
         Parameters
         ----------
         value: str
-            value to plot. Avaible : 'ux', 'ur', 'ut', 'T', 'P'
+            value to plot. Available : 'ux', 'ur', 'ut', 'T', 'P'
         title
         x_max: int or float - optional
         r_max: int or float - optional
@@ -145,7 +119,7 @@ class ransField:
         cbar.update_ticks()
         plt.show()
 
-    def get_value_in_field(self, value, grid='PSE', x_max=10, r_max=3):
+    def get_value_in_field(self, value, x_min=0, x_max=10, r_min=0, r_max=3):
         """
         Return the value in the wanted domain
 
@@ -154,8 +128,13 @@ class ransField:
         value: 'str''
             values to retrieve in the wanted domain.
             Value available : x, r, rho, ux, ur, ut, T, p
+
+        x_min: int - optional
+            minimum value of the x-axis
         x_max: int - optional
-            maximum value on the x direction
+            maximum value of the x-axis
+        r_min: int - optional
+            minimum value of the radial direction
         r_max: int - optional
             maximum value on the radial direction
 
@@ -168,23 +147,17 @@ class ransField:
         value_sub: DataFrame
             the values in the wanted domain
         """
-        match grid:
-            case 'RANS':
-                x_grid = self.rans_x_grid
 
-        x_sub = x_grid[0 <= x_grid <= x_max]
-        r_sub = r_grid[0 <= r_grid <= r_max]
-        x_mask = (self.rans_x_grid.iloc[:, 0] >= 0) & (self.rans_x.iloc[:, 0] <= x_max)
-        r_mask = (self.rans_r.iloc[0, :] >= 0) & (self.rans_r.iloc[0, :] <= r_max)
+        x_grid = self.get_rans_values()['x']
+        r_grid = self.get_rans_values()['r']
+        x_sub = (x_grid >= x_min) & (x_grid <= x_max)
+        r_sub = (r_grid >= r_min) & (r_grid <= r_max)
         value = self.rans_values[value]
         # Apply the masks to select the subarray
-        x_sub = self.rans_x.loc[x_mask, r_mask].to_n
-        r_sub = self.rans_r.loc[x_mask, r_mask]
-        value_sub = value.loc[x_mask, r_mask]
+        value_sub = value.loc[x_sub, r_sub]
         return x_sub, r_sub, value_sub
 
-
-    def _get_rans_values(self):
+    def get_rans_values(self):
         """
         Retrieve values of the RANS mean field based on the mach case selected
 
@@ -194,9 +167,7 @@ class ransField:
         """
         rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
         rans_field_array = loadmat(rans_file)['arr']
-        self.Nx, self.Nr, self.Nvalues = rans_field_array.shape # 536, 69, 8
+        self.Nx, self.Nr, self.Nvalues = rans_field_array.shape  # 536, 69, 8
 
         return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(self.Nx), columns=range(self.Nr))
                 for i, name in enumerate(rans_value_names)}
-
-
