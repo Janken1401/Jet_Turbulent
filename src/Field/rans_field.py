@@ -8,14 +8,15 @@ import numpy as np
 from ReadData.read_info import get_reference_values
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
 from toolbox.fig_parameters import RANS_FIGSIZE
-from src.ReadData.read_radius import get_r_grid
-from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
-
-rans_value_names = ['x', 'r', 'rho', 'ux', 'ur', 'ut', 'T', 'P']
-r_grid = get_r_grid()
+from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0, D
 
 
 class ransField:
+    titles = {'x': r'$\hat{x}$', 'r': r'$\hat{r}$', 'rho': r'$\hat{\rho}$',
+              'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_\theta}$', 'ut': r'$\hat{u_\theta}$',
+              'T': r'$\hat{T}$', 'P': r'$\hat{p}$'}
+    names = ['x', 'r', 'rho', 'ux', 'ur', 'ut', 'T', 'P']
+
     def __init__(self, ID_MACH=1):
         """
         Parameters
@@ -27,7 +28,7 @@ class ransField:
             raise TypeError('ID_MACH must be a int')
 
         self.ID_MACH = ID_MACH
-        self.rans_values = self.get_rans_values()
+        self.values = self.get_rans_values()
 
     def convert_to_pse_reference(self):
         """
@@ -73,26 +74,13 @@ class ransField:
 
         return rans_dim
 
-    def plot_mean_value(self, value, x_max=10, r_max=3):
-        if value not in rans_value_names:
-            raise ValueError('value must be either x, r, rho, ux, ur, ut, T or P')
-        if not isinstance(x_max, (int, float)) or not isinstance(r_max, (int, float)):
-            raise TypeError('x_max and r_max must be an int or a float')
-
-        titles = {'x': r'$\hat{x}$', 'r': r'$\hat{r}$', 'rho': r'$\hat{\rho}$',
-                  'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_\theta}$', 'ut': r'$\hat{u_\theta}$',
-                  'T': r'$\hat{T}$', 'P': r'$\hat{p}$'}
-
-        value = self.get_rans_values()[value]
-        self.plot(value, titles[value], x_max, r_max)
-
-    def plot(self, value, title='', x_max=10, r_max=3):
+    def plot(self, name_value, x_max=10, r_max=3):
         """
 
         Parameters
         ----------
         value: str
-            value to plot. Available : 'ux', 'ur', 'ut', 'T', 'P'
+            value to plot. Avaible : 'ux', 'ur', 'ut', 'T', 'P'
         title
         x_max: int or float - optional
         r_max: int or float - optional
@@ -102,7 +90,12 @@ class ransField:
         -------
         None
         """
-        x, r, value = self.get_value_in_field(value, x_max, r_max)
+        if name_value not in self.names:
+            raise ValueError("Value is not in", self.names)
+        if not isinstance(x_max, (int, float)) or not isinstance(r_max, (int, float)):
+            raise TypeError('x_max and r_max must be an int or a float')
+
+        x, r, value = self.get_value_in_field(name_value, x_max, r_max)
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=RANS_FIGSIZE, layout='constrained')
         cs = ax.contourf(x, r, value, levels=100, cmap='coolwarm')
@@ -111,7 +104,7 @@ class ransField:
         tick_spacing = 1
         ax.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
         ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
-        ax.set_title(title)
+        ax.set_title(self.titles[name_value])
         cbar = fig.colorbar(cs)
         tick_locator = ticker.MaxNLocator(nbins=5)
         cbar.locator = tick_locator
@@ -119,7 +112,7 @@ class ransField:
         cbar.update_ticks()
         plt.show()
 
-    def get_value_in_field(self, value, x_min=0, x_max=10, r_min=0, r_max=3):
+    def get_value_in_field(self, value, x_max=10, r_max=3):
         """
         Return the value in the wanted domain
 
@@ -128,13 +121,8 @@ class ransField:
         value: 'str''
             values to retrieve in the wanted domain.
             Value available : x, r, rho, ux, ur, ut, T, p
-
-        x_min: int - optional
-            minimum value of the x-axis
         x_max: int - optional
-            maximum value of the x-axis
-        r_min: int - optional
-            minimum value of the radial direction
+            maximum value on the x direction
         r_max: int - optional
             maximum value on the radial direction
 
@@ -147,14 +135,13 @@ class ransField:
         value_sub: DataFrame
             the values in the wanted domain
         """
-
-        x_grid = self.get_rans_values()['x']
-        r_grid = self.get_rans_values()['r']
-        x_sub = (x_grid >= x_min) & (x_grid <= x_max)
-        r_sub = (r_grid >= r_min) & (r_grid <= r_max)
-        value = self.rans_values[value]
+        x_mask = (self.values['x'].iloc[:, 0] >= 0) & (self.values['x'].iloc[:, 0] <= x_max)
+        r_mask = (self.values['r'].iloc[0, :] >= 0) & (self.values['r'].iloc[0, :] <= r_max)
+        value = self.values[value]
         # Apply the masks to select the subarray
-        value_sub = value.loc[x_sub, r_sub]
+        x_sub = self.values['x'].loc[x_mask, r_mask]
+        r_sub = self.values['r'].loc[x_mask, r_mask]
+        value_sub = value.loc[x_mask, r_mask]
         return x_sub, r_sub, value_sub
 
     def get_rans_values(self):
@@ -167,7 +154,6 @@ class ransField:
         """
         rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
         rans_field_array = loadmat(rans_file)['arr']
-        self.Nx, self.Nr, self.Nvalues = rans_field_array.shape  # 536, 69, 8
-
-        return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(self.Nx), columns=range(self.Nr))
-                for i, name in enumerate(rans_value_names)}
+        Nx, Nr, Nvalues = rans_field_array.shape  # 536, 69, 8
+        return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(Nx), columns=range(Nr))
+                for i, name in enumerate(self.names)}

@@ -1,5 +1,5 @@
 import pandas as pd
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, griddata, interpn
 
 from ReadData.read_radius import get_r_grid
 from src.Field.rans_field import ransField
@@ -7,10 +7,11 @@ from src.toolbox.path_directories import DIR_STABILITY
 from src.ReadData.read_info import get_reference_values
 from src.toolbox.dimless_reference_values import *
 
-pse_value_names = ['rho', 'ux', 'ur', 'ut', 'P']
-
 
 class perturbationField:
+    pse_value_names = ['rho', 'ux', 'ur', 'ut', 'P']
+    r_grid = get_r_grid()
+
     def __init__(self, St=0.4, ID_MACH=1):
         if not isinstance(St, (int, float)):
             raise TypeError('St must be a float')
@@ -19,8 +20,8 @@ class perturbationField:
         self.St = St
         self.ID_MACH = ID_MACH
         self.rans_field = ransField(ID_MACH)
-        self.pse_values = self.get_perturbation_field()
-        # self.x_grid, self.r_grid = self.grid()
+        self.values = self.get_perturbation_field()
+        self.pse_grid = self.grid()
 
     # def interpolate_grid(self):
     #     rans_values = self.rans_field.convert_to_pse_reference()
@@ -43,28 +44,27 @@ class perturbationField:
     #
     #     return rans_interpolated
 
+
     def interpolate_to_pse_grid(self):
-        # Initialize dictionary to store interpolated values
         rans_interpolated = {}
         rans_field = ransField(self.ID_MACH)
-        rans_values = rans_field.convert_to_pse_reference()
+        rans_in_pse_ref = rans_field.convert_to_pse_reference()
 
-        rans_x_grid = rans_values['x'].to_numpy()[]
+        rans_x_values = [rans_field.values['x'].iloc[:, i] for i in range(len(self.r_grid))]
 
+        for value in self.pse_value_names:
+            #Making sure the interpolation is done for each points like this
+            interpolated_field = np.zeros((len(self.pse_grid), len(self.r_grid)))
 
-        for value in pse_value_names:
-            # Initialize an empty array for interpolated values on the PSE grid
-            interpolated_field = np.zeros((len(self.x_grid), len(self.r_grid)))
-
-            # Interpolate along the x-axis for each fixed r value (since r grids match)
             for i, r_val in enumerate(self.r_grid):
-                # Interpolate at this r position across all x values
-                rans_values_at_x = rans_values[value].iloc[:, i]
-                cs = CubicSpline(rans_x_grid, rans_values_at_x)
-                interpolated_field[:, i] = cs(self.x_grid)
+                rans_values_at_r = rans_in_pse_ref[value].iloc[:, i]
+                rans_x_at_r = rans_x_values[i]
 
-                rans_interpolated[value] = pd.DataFrame(interpolated_field,
-                                                        index=self.x_grid, columns=self.r_grid)
+                cs = CubicSpline(rans_x_at_r, rans_values_at_r)
+
+                interpolated_field[:, i] = cs(self.pse_grid[:, i])
+
+            rans_interpolated[value] = interpolated_field
 
         return rans_interpolated
 
@@ -99,27 +99,22 @@ class perturbationField:
         rans_dim : dict
             contains DataFrame of the rans field except for x and r
         """
-        pert_values = self.get_perturbation_field()
         ref_values = get_reference_values().iloc[self.ID_MACH - 1]
         rans_dim = {
-                'ux': pert_values['ux'] * ref_values['ux'],
-                'ur': pert_values['ur'] * ref_values['ux'],
-                'ut': pert_values['ut'] * ref_values['ux'],
-                'T': pert_values['T'] * ref_values['T'],
-                'P': pert_values['P'] * ref_values['rho'] * ref_values['ux'] ** 2,
-                'rho': pert_values['rho'] * ref_values['rho']
+                'ux': self.values['ux'] * ref_values['ux'],
+                'ur': self.values['ur'] * ref_values['ux'],
+                'ut': self.values['ut'] * ref_values['ux'],
+                'T': self.values['T'] * ref_values['T'],
+                'P': self.values['P'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'rho': self.values['rho'] * ref_values['rho']
         }
 
         return rans_dim
 
     def grid(self):
-        x_grid = self.get_perturbation_field()['x'].to_numpy()
-        r_grid = get_r_grid()
-        nx = len(np.unique(x_grid))
-        nr = len(r_grid)
-        df_x_grid = pd.DataFrame(x_grid.reshape(nx, nr), columns=np.arange(nr))
-        df_r_grid = pd.DataFrame(r_grid.reshape(nx, nr), columns=np.arange(nr))
-        return df_x_grid, df_r_grid
+        nr = self.r_grid.size
+        x = self.values['x'].to_numpy()
+        return np.tile(x[:, np.newaxis], (1, nr))
 
     def get_perturbation_field(self):
         """Retrieve Results from stability fields
