@@ -35,4 +35,4 @@ un calcul d'erreur ou un graphique. Cela simplifierait les interpolations ultér
 INTERPOLATION
 ----------------
 
-Prendre le module scipy.interpolate.griddata
+Prendre le module scipy.interpolate.CubicSpline
