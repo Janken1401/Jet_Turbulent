@@ -1,7 +1,11 @@
-Adimmensionner les grandeurs (voir lesquelles le sont surtout)
+Adimmensionner les grandeurs (voir lesquelles le sont surtout) FAIT
 
-Interpolation des grilles: scipy.SplineCubic
+Interpolation des grilles: scipy.SplineCubic FAIT
 
-calculer champs pertubé
+calculer champs pertubés
+
+Refaire conversion (ux, ur > abs / Re / Im)
+
+
 
 

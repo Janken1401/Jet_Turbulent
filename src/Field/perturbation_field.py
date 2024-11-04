@@ -12,9 +12,12 @@ from src.toolbox.dimless_reference_values import *
 
 
 class PerturbationField:
-    x_grid: DataFrame
-    pse_value_names = ['rho', 'ux', 'ur', 'ut', 'T', 'P']
-
+    pse_value_names = ['x', 'r',
+                       'Re(ux)', 'Im(ux)', 'abs(ux)',
+                       'Re(ur)', 'Im(ur)', 'abs(ur)',
+                       'Re(ut)', 'Im(ut)', 'abs(ut)',
+                       'Re(rho)', 'Im(rho)', 'abs(rho)',
+                       'Re(p)', 'Im(p)', 'abs(p)']
 
     def __init__(self, St=0.4, ID_MACH=1):
         """
@@ -50,11 +53,18 @@ class PerturbationField:
 
         pse_dim = self.pse_dimensionalized()
         pse_to_rans = {
-                'ux': pse_dim['ux'] / c_0,
-                'ur': pse_dim['ur'] / c_0,
-                'ut': pse_dim['ut'] / c_0,
-                'rho': pse_dim['rho'] / rho_0,
-                'P': pse_dim['P'] / (gamma * p_0),
+                'abs(ux)': pse_dim['abs(ux)'] / c_0,
+                'Re(ux)': pse_dim['Re(ux)'] / c_0,
+                'Im(ux)': pse_dim['Im(ux)'] / c_0,
+                'abs(ur)': pse_dim['abs(ur)'] / c_0,
+                'Re(ur)': pse_dim['Re(ur)'] / c_0,
+                'Im(ur)': pse_dim['Im(ur)'] / c_0,
+                'abs(rho)': pse_dim['abs(rho)'] / c_0,
+                'Re(rho)': pse_dim['Re(rho)'] / c_0,
+                'Im(rho)': pse_dim['Im(rho)'] / rho_0,
+                'abs(p)': pse_dim['abs(p)'] / (gamma * p_0),
+                'Re(p)': pse_dim['Re(p)'] / (gamma * p_0),
+                'Im(p)': pse_dim['Im(p)'] / (gamma * p_0),
         }
 
         return pse_to_rans
@@ -70,11 +80,18 @@ class PerturbationField:
         """
         ref_values = get_reference_values().iloc[self.ID_MACH - 1]
         pse_dim = {
-                'ux': self.pert_values['ux'] * ref_values['ux'],
-                'ur': self.pert_values['ur'] * ref_values['ux'],
-                'ut': self.pert_values['ut'] * ref_values['ux'],
-                'P': self.pert_values['P'] * ref_values['rho'] * ref_values['ux'] ** 2,
-                'rho': self.pert_values['rho'] * ref_values['rho']
+                'abs(ux)': self.pert_values['abs(ux)'] * ref_values['ux'],
+                'Re(ux)': self.pert_values['Re(ux)'] * ref_values['ux'],
+                'Im(ux)': self.pert_values['Im(ux)'] * ref_values['ux'],
+                'abs(ur)': self.pert_values['abs(ur)'] * ref_values['ux'],
+                'Re(ur)': self.pert_values['Re(ur)'] * ref_values['ux'],
+                'Im(ur)': self.pert_values['Im(ur)'] * ref_values['ux'],
+                'abs(p)': self.pert_values['abs(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'Re(p)': self.pert_values['Re(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'Im(p)': self.pert_values['Im(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'abs(rho)': self.pert_values['abs(rho)'] * ref_values['rho'],
+                'Re(rho)': self.pert_values['Re(rho)'] * ref_values['rho'],
+                'Im(rho)': self.pert_values['Im(rho)'] * ref_values['rho']
         }
 
         return pse_dim
@@ -107,10 +124,5 @@ class PerturbationField:
         return pd.read_csv(file_perturbation,
                            delimiter=r'\s+',
                            skiprows=3,
-                           names=['x', 'r',
-                                  'Re(ux)', 'Im(ux)', 'abs(ux)',
-                                  'Re(ur)', 'Im(ur)', 'abs(ur)',
-                                  'Re(ut)', 'Im(ut)', 'abs(ut)',
-                                  'Re(rho)', 'Im(rho)', 'abs(rho)',
-                                  'Re(p)', 'Im(p)', 'abs(p)']
+                           names=self.pse_value_names
                            )
