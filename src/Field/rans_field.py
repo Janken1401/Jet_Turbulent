@@ -39,12 +39,12 @@ class RansField:
             The grid of x values for interpolation.
 .
         """
-        if not isinstance(x_grid, pd.DataFrame):
-            raise TypeError('x_grid must be a np.ndarray')
-        if np.shape(x_grid)[0] <= np.shape(self.values['x'])[0]:
-            raise ValueError('Values must be interpolated into a larger grid')
-        if np.shape(x_grid)[1] != np.shape(self.values['x'])[1]:
-            raise ValueError('the grid along r must have the same size')
+        # if not isinstance(x_grid, pd.DataFrame):
+        #     raise TypeError('x_grid must be a np.ndarray')
+        # if np.shape(x_grid)[0] <= np.shape(self.values['x'])[0]:
+        #     raise ValueError('Values must be interpolated into a larger grid')
+        # if np.shape(x_grid)[1] != np.shape(self.values['x'])[1]:
+        #     raise ValueError('the grid along r must have the same size')
 
         rans_interpolated = {}
         r_grid = get_r_grid()

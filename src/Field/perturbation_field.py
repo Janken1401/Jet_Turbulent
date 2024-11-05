@@ -19,6 +19,7 @@ class PerturbationField:
                        'Re(rho)', 'Im(rho)', 'abs(rho)',
                        'Re(p)', 'Im(p)', 'abs(p)']
 
+
     def __init__(self, St=0.4, ID_MACH=1):
         """
 
@@ -36,10 +37,9 @@ class PerturbationField:
         self.St = St
         self.ID_MACH = ID_MACH
         self.rans_field = RansField(self.ID_MACH)
-        self.pert_values = self.get_perturbation_values()
-        self.x_grid, self.r_grid = self.grid()
-        self.rans_field.interpolate(self.x_grid)
-        self.rans_values = self.rans_field.interpolated_values
+        self.get_perturbation_values()
+        # self.rans_field.interpolate(self.x_grid)
+        # self.rans_values = self.rans_field.interpolated_values
 
     def convert_to_rans_reference(self):
         """
@@ -120,9 +120,20 @@ class PerturbationField:
         dir_St = DIR_STABILITY / "St{:02d}".format(int(10 * self.St))
         dir_field = dir_St / 'Field' / f'FrancCase_{self.ID_MACH}'
         file_perturbation = dir_field / f'pertpse_FrancCase_{self.ID_MACH}.dat'
+        # rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
+        # rans_field_array = loadmat(rans_file)['arr']
+        # Nx, Nr, Nvalues = rans_field_array.shape  # 536, 69, 8
+        # return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(Nx), columns=range(Nr))
+        #         for i, name in enumerate(self.names)}
 
-        return pd.read_csv(file_perturbation,
-                           delimiter=r'\s+',
-                           skiprows=3,
-                           names=self.pse_value_names
-                           )
+        self.pert_values = pd.read_csv(file_perturbation,
+                                delimiter=r'\s+',
+                                skiprows=3,
+                                names=self.pse_value_names
+                                ).pivot(index='x', columns='r', values=self.pse_value_names)
+
+        self.x_grid = self.pert_values['x']
+        self.r_grid = self.pert_values['r']
+
+        self.pert_values.drop(['x', 'r'], axis=1, inplace=True)
+
