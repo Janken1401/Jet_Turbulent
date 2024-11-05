@@ -10,10 +10,7 @@ from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
 
 
 class RansField:
-    titles = {'x': r'$\hat{x}$', 'r': r'$\hat{r}$', 'rho': r'$\hat{\rho}$',
-              'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_\theta}$', 'ut': r'$\hat{u_\theta}$',
-              'T': r'$\hat{T}$', 'P': r'$\hat{p}$'}
-    names = ['x', 'r', 'rho', 'ux', 'ur', 'ut', 'T', 'P']
+    quantities = ['rho', 'ux', 'ur', 'ut', 'T', 'p']
 
     def __init__(self, ID_MACH=1):
         """
@@ -22,6 +19,7 @@ class RansField:
         ID_MACH : int
             ID of the Mach reference
         """
+        self.r = get_r_grid()
         if not isinstance(ID_MACH, int):
             raise TypeError('ID_MACH must be a int')
 
@@ -48,7 +46,7 @@ class RansField:
 
         rans_interpolated = {}
         r_grid = get_r_grid()
-        for value in self.names[2:]: #skip x and r
+        for value in self.quantities: #skip x and r
             field = np.zeros((len(x_grid), len(r_grid)))
 
             for i, r_val in enumerate(r_grid):
@@ -58,7 +56,7 @@ class RansField:
 
                 field[:, i] = cs(x_grid)
 
-            rans_interpolated[value] = pd.DataFrame(field, index=x_grid, columns=r_grid)
+            rans_interpolated[value] = pd.DataFrame(field)
 
         self.interpolated_values = rans_interpolated
 
@@ -81,7 +79,7 @@ class RansField:
                 'ur': rans_dim['ur'] / u_ref,
                 'ut': rans_dim['ut'] / u_ref,
                 'T': rans_dim['T'] / ref_values['T'],
-                'P': rans_dim['P'] / ref_values['P'],
+                'p': rans_dim['p'] / ref_values['P'],
                 'rho': rans_dim['rho'] / ref_values['rho']
         }
 
@@ -102,7 +100,7 @@ class RansField:
                 'ur': rans_values['ur'] * c_0,
                 'ut': rans_values['ut'] * c_0,
                 'T': rans_values['T'] * (gamma - 1) * T_0,
-                'P': rans_values['P'] * gamma * p_0,
+                'p': rans_values['p'] * gamma * p_0,
                 'rho': rans_values['rho'] * rho_0
         }
 
@@ -120,5 +118,5 @@ class RansField:
         rans_field_array = loadmat(rans_file)['arr']
         Nx, Nr, Nvalues = rans_field_array.shape  # 536, 69, 8
         self.x = rans_field_array[:, 0, 0]
-        return {name: pd.DataFrame(rans_field_array[:, :, i+2], index=range(Nx), columns=range(Nr))
-                for i, name in enumerate(self.names[2:])} #skip x and r
+        self.values = {name: pd.DataFrame(rans_field_array[:, :, i+2], index=range(Nx), columns=range(Nr))
+                for i, name in enumerate(self.quantities)}

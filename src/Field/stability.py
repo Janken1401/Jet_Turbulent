@@ -6,6 +6,11 @@ from toolbox.path_directories import DIR_STABILITY
 
 
 class Stability:
+    stability_names = ['x',
+                       'Re(alpha)', 'Im(alpha)', 'abs(alpha)',
+                       'Re(int(alpha))', 'Im(int(alpha))',
+                       'C<sub>ph</sub>', 'sigma', 'N']
+
     def __init__(self, St, ID_MACH):
         """
         Parameters
@@ -23,7 +28,6 @@ class Stability:
         self.ID_MACH = ID_MACH
         self.stability_value = self.get_stability_data()
 
-
     def get_stability_data(self):
         """Retrieve Results from stability fields
 
@@ -39,12 +43,13 @@ class Stability:
         dir_field = dir_St / 'alpha' / f'FrancCase_{self.ID_MACH}'
         file_stability = dir_field / f'vappse_FrancCase_{self.ID_MACH}.dat'
 
-        return pd.read_csv(file_stability,
+        data = pd.read_csv(file_stability,
                            delimiter=r'\s+',
                            skiprows=3,
-                           names=['x',
-                                  'Re(alpha)', 'Im(alpha)', 'abs(alpha)',
-                                  'Re(int(alpha))', 'Im(int(alpha))',
-                                  'C<sub>ph</sub>', 'sigma', 'N']).drop(labels=['C<sub>ph</sub>', 'sigma', 'N'], axis='columns')
+                           names=self.stability_names).drop(labels=['C<sub>ph</sub>', 'sigma', 'N'], axis='columns')
+
+          # Initialize dictionary to hold each quantity as a DataFrame
+        perturbation_dict = {quantity: data[quantity] for quantity in self.stability_names[1: ]}
+
 
 

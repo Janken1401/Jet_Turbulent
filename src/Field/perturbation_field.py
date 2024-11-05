@@ -19,7 +19,6 @@ class PerturbationField:
                        'Re(rho)', 'Im(rho)', 'abs(rho)',
                        'Re(p)', 'Im(p)', 'abs(p)']
 
-
     def __init__(self, St=0.4, ID_MACH=1):
         """
 
@@ -30,8 +29,8 @@ class PerturbationField:
         ID_MACH: int
             Case selected
         """
-        self.r_grid = None
-        self.x_grid = None
+        self.values = None
+        self.r_grid = get_r_grid()
         if not isinstance(St, (int, float)):
             raise TypeError('St must be a float')
         if not isinstance(ID_MACH, int):
@@ -40,8 +39,8 @@ class PerturbationField:
         self.ID_MACH = ID_MACH
         self.rans_field = RansField(self.ID_MACH)
         self.get_perturbation_values()
-
-
+        self.rans_field.interpolate(self.x_grid)
+        self.rans_values = self.rans_field.interpolated_values
 
     def convert_to_rans_reference(self):
         """
@@ -82,18 +81,18 @@ class PerturbationField:
         """
         ref_values = get_reference_values().iloc[self.ID_MACH - 1]
         pse_dim = {
-                'abs(ux)': self.pert_values['abs(ux)'] * ref_values['ux'],
-                'Re(ux)': self.pert_values['Re(ux)'] * ref_values['ux'],
-                'Im(ux)': self.pert_values['Im(ux)'] * ref_values['ux'],
-                'abs(ur)': self.pert_values['abs(ur)'] * ref_values['ux'],
-                'Re(ur)': self.pert_values['Re(ur)'] * ref_values['ux'],
-                'Im(ur)': self.pert_values['Im(ur)'] * ref_values['ux'],
-                'abs(p)': self.pert_values['abs(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
-                'Re(p)': self.pert_values['Re(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
-                'Im(p)': self.pert_values['Im(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
-                'abs(rho)': self.pert_values['abs(rho)'] * ref_values['rho'],
-                'Re(rho)': self.pert_values['Re(rho)'] * ref_values['rho'],
-                'Im(rho)': self.pert_values['Im(rho)'] * ref_values['rho']
+                'abs(ux)': self.values['abs(ux)'] * ref_values['ux'],
+                'Re(ux)': self.values['Re(ux)'] * ref_values['ux'],
+                'Im(ux)': self.values['Im(ux)'] * ref_values['ux'],
+                'abs(ur)': self.values['abs(ur)'] * ref_values['ux'],
+                'Re(ur)': self.values['Re(ur)'] * ref_values['ux'],
+                'Im(ur)': self.values['Im(ur)'] * ref_values['ux'],
+                'abs(p)': self.values['abs(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'Re(p)': self.values['Re(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'Im(p)': self.values['Im(p)'] * ref_values['rho'] * ref_values['ux'] ** 2,
+                'abs(rho)': self.values['abs(rho)'] * ref_values['rho'],
+                'Re(rho)': self.values['Re(rho)'] * ref_values['rho'],
+                'Im(rho)': self.values['Im(rho)'] * ref_values['rho']
         }
 
         return pse_dim
@@ -101,36 +100,43 @@ class PerturbationField:
     def get_interpolated_values(self, x_grid):
         return self.rans_field.interpolate(x_grid=x_grid)
 
-    def grid(self):
-        nr = get_r_grid().size
-        x = self.pert_values['x'].to_numpy()
-        r_grid = pd.DataFrame(np.tile(get_r_grid(), (len(x), 1)))
-        x_grid = pd.DataFrame(np.tile(x[:, np.newaxis], (1, nr)))
-        return x_grid, r_grid
-
     def get_perturbation_values(self):
-        """Retrieve Results from stability fields
+        """Retrieve Results from stability fields as a dictionary of DataFrames with integer indexing.
 
         Returns
         -------
-        DataFrame
-            a DataFrame containing all values from the perturbation field results
+        dict
+            A dictionary where each key is a quantity name and the value is a DataFrame
+            with integer indices for rows (x-axis) and columns (r-axis).
         """
 
-        # Used read_csv instead with space delimiter instead of read_fwf in case
-        # of floating inconsistency.
-        dir_St = DIR_STABILITY / "St{:02d}".format(int(10 * self.St))
+        # Load the perturbation data
+        dir_St = DIR_STABILITY / f"St{int(10 * self.St):02d}"
         dir_field = dir_St / 'Field' / f'FrancCase_{self.ID_MACH}'
         file_perturbation = dir_field / f'pertpse_FrancCase_{self.ID_MACH}.dat'
 
-        self.pert_values = pd.read_csv(file_perturbation,
-                                delimiter=r'\s+',
-                                skiprows=3,
-                                names=self.pse_value_names
-                                ).pivot(index='x', columns='r', values=self.pse_value_names)
+        # Read the full data into a DataFrame
+        full_data = pd.read_csv(
+                file_perturbation,
+                delimiter=r'\s+',
+                skiprows=3,
+                names=self.pse_value_names
+        )
 
-        self.x_grid = self.pert_values.index.to_numpy()
-        self.r_grid = get_r_grid()
+        # Extract the unique `x` and `r` values for indexing
+        x_values = full_data['x'].unique()
 
-        self.pert_values.drop(columns=['x', 'r'], errors='ignore', inplace=True)
+        # Initialize dictionary to hold each quantity as a DataFrame
+        perturbation_dict = {}
 
+        # For each quantity (excluding 'x' and 'r'), pivot into a DataFrame
+        for quantity in self.pse_value_names[2:]:
+            # Pivot and reset index and columns to integers
+            quantity_df = full_data.pivot(index='x', columns='r', values=quantity)
+            quantity_df.index = range(len(quantity_df))  # Reset row indices to 0, 1, ..., Nx-1
+            quantity_df.columns = range(len(quantity_df.columns))  # Reset column indices to 0, 1, ..., Nr-1
+            perturbation_dict[quantity] = quantity_df
+
+        # Save the dictionary and index arrays to instance attributes
+        self.values = perturbation_dict
+        self.x_grid = x_values
