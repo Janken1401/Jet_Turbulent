@@ -30,6 +30,8 @@ class PerturbationField:
         ID_MACH: int
             Case selected
         """
+        self.r_grid = None
+        self.x_grid = None
         if not isinstance(St, (int, float)):
             raise TypeError('St must be a float')
         if not isinstance(ID_MACH, int):
@@ -38,8 +40,8 @@ class PerturbationField:
         self.ID_MACH = ID_MACH
         self.rans_field = RansField(self.ID_MACH)
         self.get_perturbation_values()
-        # self.rans_field.interpolate(self.x_grid)
-        # self.rans_values = self.rans_field.interpolated_values
+
+
 
     def convert_to_rans_reference(self):
         """
@@ -120,11 +122,6 @@ class PerturbationField:
         dir_St = DIR_STABILITY / "St{:02d}".format(int(10 * self.St))
         dir_field = dir_St / 'Field' / f'FrancCase_{self.ID_MACH}'
         file_perturbation = dir_field / f'pertpse_FrancCase_{self.ID_MACH}.dat'
-        # rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
-        # rans_field_array = loadmat(rans_file)['arr']
-        # Nx, Nr, Nvalues = rans_field_array.shape  # 536, 69, 8
-        # return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(Nx), columns=range(Nr))
-        #         for i, name in enumerate(self.names)}
 
         self.pert_values = pd.read_csv(file_perturbation,
                                 delimiter=r'\s+',
@@ -132,8 +129,8 @@ class PerturbationField:
                                 names=self.pse_value_names
                                 ).pivot(index='x', columns='r', values=self.pse_value_names)
 
-        self.x_grid = self.pert_values['x']
-        self.r_grid = self.pert_values['r']
+        self.x_grid = self.pert_values.index.to_numpy()
+        self.r_grid = get_r_grid()
 
-        self.pert_values.drop(['x', 'r'], axis=1, inplace=True)
+        self.pert_values.drop(columns=['x', 'r'], errors='ignore', inplace=True)
 

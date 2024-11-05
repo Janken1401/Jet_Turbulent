@@ -27,7 +27,7 @@ class RansField:
 
         self.ID_MACH = ID_MACH
         self.values = self.get_rans_values()
-        self.interpolated_values = None
+        self.get_rans_values()
 
     def interpolate(self, x_grid) :
         """
@@ -53,13 +53,12 @@ class RansField:
 
             for i, r_val in enumerate(r_grid):
                 rans_values_at_r = self.values[value].iloc[:, i]
-                rans_x_at_r = self.values['x'][i]
 
-                cs = CubicSpline(rans_x_at_r, rans_values_at_r)
+                cs = CubicSpline(self.x, rans_values_at_r)
 
-                field[:, i] = cs(x_grid[:][i])
+                field[:, i] = cs(x_grid)
 
-            rans_interpolated[value] = pd.DataFrame(field)
+            rans_interpolated[value] = pd.DataFrame(field, index=x_grid, columns=r_grid)
 
         self.interpolated_values = rans_interpolated
 
@@ -120,5 +119,6 @@ class RansField:
         rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
         rans_field_array = loadmat(rans_file)['arr']
         Nx, Nr, Nvalues = rans_field_array.shape  # 536, 69, 8
-        return {name: pd.DataFrame(rans_field_array[:, :, i], index=range(Nx), columns=range(Nr))
-                for i, name in enumerate(self.names)}
+        self.x = rans_field_array[:, 0, 0]
+        return {name: pd.DataFrame(rans_field_array[:, :, i+2], index=range(Nx), columns=range(Nr))
+                for i, name in enumerate(self.names[2:])} #skip x and r
