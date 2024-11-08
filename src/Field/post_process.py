@@ -3,48 +3,100 @@ import pandas as pd
 from matplotlib import pyplot as plt, ticker
 
 from Field.perturbation_field import PerturbationField
+from Field.rans_field import RansField
 from Field.stability import Stability
+from ReadData.read_info import get_reference_values
+from ReadData.read_mach import get_mach_reference
+from ReadData.read_radius import get_r_grid
 from toolbox.fig_parameters import RANS_FIGSIZE
 
 
 class PostProcess:
-    rans_value_names = ['rho', 'ux', 'ur', 'ut', 'p', 'T']
-    pert_value_names = ['Re(ux)', 'Im(ux)', 'abs(ux)',
-                        'Re(ur)', 'Im(ur)', 'abs(ur)',
-                        'Re(rho)', 'Im(rho)', 'abs(rho)',
-                        'Re(p)', 'Im(p)', 'abs(p)']
+    rans_quantities = ['rho', 'ux', 'ur', 'ut', 'p', 'T']
+    pse_quantities = ['Re(ux)', 'Im(ux)', 'abs(ux)',
+                      'Re(ur)', 'Im(ur)', 'abs(ur)',
+                      'Re(rho)', 'Im(rho)', 'abs(rho)',
+                      'Re(p)', 'Im(p)', 'abs(p)']
 
-    titles = {'x': r'$\hat{x}$', 'r': r'$\hat{r}$', 'rho': r'$\hat{\rho}$',
-              'ux': r'$\hat{u_x}$', 'ur': r'$\hat{u_r}$',
-              'T': r'$\hat{T}$', 'p': r'$\hat{p}$'}
-    titles.update({name: name for name in pert_value_names})
+    titles = {
+            'rho': r'$\hat{\rho}$',
+            'Re(rho)': r'$\Re{\rho}$',
+            'Im(rho)': r'$\Im{\rho}$',
+            'abs(rho)': r'$\abs{\rho}$',
 
-    def __init__(self, St, ID_MACH):
+            'ux': r'$\hat{u_x}$',
+            'Re(ux)': r'$\Re(u_x)$',
+            'Im(ux)': r'$\Im(u_x)$',
+            'abs(ux)': r'$\abs{u_x}$',
+
+            'ur': r'$\hat{u_r}$',
+            'Re(ur)': r'$\Re(u_r)$',
+            'Im(ur)': r'$\Im(u_r)$',
+            'abs(ur)': r'$\abs{u_r}$',
+
+            'ut': r'$\hat{u_\theta}$',
+            'Re(ut)': r'$\Re(u_\theta)$',
+            'Im(ut)': r'$\Im(u_\theta)$',
+            'abs(ut)': r'$\abs{u_\theta}$',
+
+            'T': r'$\hat{T}$',
+            'Re(T)': r'$\Re(T)$',
+            'Im(T)': r'$\Im(T)$',
+            'abs(T)': r'$\abs{T}$',
+
+            'p': r'$\hat{p}$',
+            'Re(p)': r'$\Re(p)$',
+            'Im(p)': r'$\Im(pp$',
+            'abs(p)': r'$\abs{p}$',
+            'var(p)': 'Stoechastic Mean p'
+    }
+
+    def __init__(self, St: float, ID_MACH: int, verbose: bool = False) -> None:
+
+        if not isinstance(St, (int, float)) or St <= 0:
+            raise ValueError('St must be a positive float or integer')
+        if not isinstance(ID_MACH, int) or ID_MACH <= 0:
+            raise ValueError('ID_MACH must be a positive integer')
+
+        self.St = St
+        self.ID_MACH = ID_MACH
+
+        self.rans_field = RansField(ID_MACH)
         self.pert_field = PerturbationField(St, ID_MACH)
-        self.stability_data = Stability(St, ID_MACH).get_stability_data()
-        self.rans_field = self.pert_field.rans_field
-        self.rans_values = self.pert_field.rans_values
-        self.x_grid = self.pert_field.x_grid
-        self.r_grid = self.pert_field.r_grid
+        if verbose:
+            self.__verbose()
 
-    def fields_stats(self):
+    def get_fields_stats(self, quantity: str = None) -> pd.DataFrame | dict[str, pd.DataFrame]:
+
+        if not isinstance(quantity, str):
+            raise TypeError('quantity must be a string')
+
+        if quantity and quantity not in self.rans_quantities:
+            raise ValueError(f'{quantity} is not a valid quantity - chose between {self.rans_quantities}')
+
         stats_dict = {}
-        for field in self.rans_value_names:
-            field_values = pd.Series(self.rans_field.interpolated_values[field].to_numpy().flatten())
-            stats = field_values.describe()
-            stats_dict[field] = stats
+        rans_values = self.pert_field.rans_values
+        if quantity:
+            return pd.DataFrame(rans_values[quantity].describe())
+        else:
+            for quantity in self.rans_quantities:
+                stats = rans_values[quantity].describe()
+                stats_dict[quantity] = stats
+
         return pd.DataFrame(stats_dict)
 
     def plot_alpha(self):
+        x_grid = self.pert_field.x_grid
+        stability_data = self.pert_field.get_stability_data()
         fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
-        ax0.plot(self.x_grid, self.stability_data['Re(alpha)'], title=r'$\alpha_r$')
-        ax1.plot(self.x_grid, self.stability_data['Im(alpha)'], title=r'$\alpha_i$')
+        ax0.plot(x_grid, stability_data['Re(alpha)'], title=r'$\alpha_r$')
+        ax1.plot(x_grid, stability_data['Im(alpha)'], title=r'$\alpha_i$')
         ax0.get_legend().remove()
         ax1.get_legend().remove()
         fig.tight_layout()
         plt.show()
 
-    def plot(self, name_value, x_min=0, x_max=10, r_min=0, r_max=5, t=0):
+    def plot_field(self, name_value, field: 'str' = 'total', x_min=0, x_max=10, r_min=0, r_max=5, t=0):
         """
 
         Parameters
@@ -61,17 +113,34 @@ class PostProcess:
         -------
         None
         """
+        if not isinstance(field, str):
+            raise TypeError("field must be a string between 'total', 'rans' and 'pse'")
 
-        self.__test_validity_input_field(name_value, x_min, x_max, r_min, r_max)
-        x, r, value = self.get_value_in_field(name_value, x_min=x_min, x_max=x_max, r_min=r_min, r_max=r_max)
+        self.__test_validity_input_field(x_min, x_max, r_min, r_max)
+        match field:
+            case 'total':
+                if name_value not in self.rans_quantities:
+                    raise ValueError('quantity not valid - choose among', self.rans_quantities)
+                value = self.pert_field.compute_total_field()
+                value = RansField.dimensionalized(value)
+            case 'rans':
+                if name_value not in self.rans_quantities:
+                    raise ValueError('quantity not valid - choose among', self.rans_quantities)
+                value = self.pert_field.rans_values[name_value]
+            case 'pse':
+                if name_value not in self.pse_quantities:
+                    raise ValueError('quantity not valid - choose among', self.pse_quantities)
+                value = self.pert_field.convert_to_rans_reference()[name_value]
+            case _:
+                raise ValueError('the field you want to display is not available - choose between (total, rans or pse)')
+
+        x, r, value_sub = self.get_value_in_field(value, x_min=x_min, x_max=x_max, r_min=r_min, r_max=r_max)
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=RANS_FIGSIZE, layout='constrained')
-        if name_value in self.rans_value_names:
-            cs = ax.contourf(x, r, value.transpose(), levels=100, cmap='coolwarm')
-        elif name_value in self.pert_value_names:
-            cs = ax.contour(x, r, value.transpose(), levels=100, cmap='coolwarm')
-        else:
-            raise ValueError("Value can't be plotted")
+
+
+        cs = ax.contourf(x, r, value_sub.transpose(), levels=100, cmap='coolwarm')
+
 
         plt.xlabel('x/D')
         plt.ylabel('r/D')
@@ -86,51 +155,24 @@ class PostProcess:
         cbar.update_ticks()
         plt.show()
 
-    def get_value_in_field(self, name_value, x_min=0, x_max=10, r_min=0, r_max=3):
+    def get_value_in_field(self, value, x_min=0, x_max=10, r_min=0, r_max=3):
         """
         Return the value in the wanted domain
-
-        Parameters
-        ----------
-        r_min
-        x_min
-        name_value: 'str'
-            values to retrieve in the wanted domain.
-            Value available : x, r, rho, ux, ur, T, p
-        x_max: int - optional
-            maximum value on the x direction
-        r_max: int - optional
-            maximum value on the radial direction
-
-        Returns
-        -------
-        x_sub: Dataframe
-            the x values in the wanted domain
-        r_sub: DataFrame
-            the r values in the wanted domain
-        value_sub: DataFrame
-            the values in the wanted domain
         """
 
-        self.__test_validity_input_field(name_value, x_min, x_max, r_min, r_max)
+        self.__test_validity_input_field(x_min, x_max, r_min, r_max)
 
-        xmin_idx, xmax_idx, rmin_idx, rmax_idx = self.__get_index(x_min, x_max, r_min, r_max)
-        # Apply the masks to select the subarray
-        x_sub = self.pert_field.x_grid[xmin_idx: xmax_idx]
-        r_sub = self.pert_field.r_grid[rmin_idx: rmax_idx]
-        if name_value in self.rans_value_names:
-            value = self.rans_values[name_value]
-        elif name_value in self.pert_value_names:
-            value = self.pert_field.values[name_value]
-        else:
-            raise ValueError("Value not available")
-        value_sub = value.iloc[xmin_idx: xmax_idx, rmin_idx: rmax_idx]
+        r_grid = get_r_grid()
+        x_grid = self.pert_field.x_grid
+
+        x_min_idx, x_max_idx, r_min_idx, r_max_idx = self.__get_index(x_min, x_max, r_min, r_max)
+        x_sub = x_grid[x_min_idx: x_max_idx]
+        r_sub = r_grid[r_min_idx: r_max_idx]
+
+        value_sub = value.iloc[x_min_idx: x_max_idx, r_min_idx: r_max_idx]
         return x_sub, r_sub, value_sub
 
-    def __test_validity_input_field(self, name_value, x_min, x_max, r_min, r_max):
-        if name_value not in self.rans_value_names and name_value not in self.pert_value_names:
-            raise ValueError("Value is not in", self.rans_value_names, self.pert_value_names)
-
+    def __test_validity_input_field(self, x_min, x_max, r_min, r_max):
         if not isinstance(x_max, (float, int)) or not isinstance(r_max, (float, int)):
             raise TypeError('x_max and r_max must be an int or a float')
         if not isinstance(x_min, (float, int)) or not isinstance(r_min, (float, int)):
@@ -140,23 +182,34 @@ class PostProcess:
             raise ValueError('x_min must be greater than x_max')
         if r_max < r_min:
             raise ValueError('r_max must be greater than r_min')
-        min_of_x = np.argmin(self.pert_field.x_grid)
-        min_of_r = np.argmin(self.pert_field.r_grid)
+
+        x_grid = self.pert_field.x_grid
+        r_grid = get_r_grid()
+
+        min_of_x = np.argmin(x_grid)
+        min_of_r = np.argmin(r_grid)
         if x_min < min_of_x:
             raise ValueError(f'x_max must be greater than or equal to {min_of_x}')
         if r_min < min_of_r:
             raise ValueError(f'r_max must be greater than or equal to {min_of_r}')
 
-        max_of_x = np.argmax(self.pert_field.x_grid)
-        max_of_r = np.argmax(self.pert_field.r_grid)
+        max_of_x = np.argmax(x_grid)
+        max_of_r = np.argmax(r_grid)
         if x_min > max_of_x:
             raise ValueError(f'x_max must be greater than or equal to {max_of_x}')
         if r_min > max_of_r:
             raise ValueError(f'r_max must be greater than or equal to {max_of_r}')
 
+    def __verbose(self):
+        print(f'Reference values for the case k={self.ID_MACH}:')
+        print(get_reference_values().loc[self.ID_MACH].to_string())
+        print(get_mach_reference().loc[self.ID_MACH].to_string())
+
     def __get_index(self, x_min, x_max, r_min, r_max):
-        xmax_idx = np.where(self.pert_field.x_grid <= x_max)[0][-1]
-        xmin_idx = np.where(self.pert_field.x_grid >= x_min)[0][0]
-        rmax_idx = np.where(self.pert_field.r_grid <= r_max)[0][-1]
-        rmin_idx = np.where(self.pert_field.r_grid >= r_min)[0][0]
-        return xmin_idx, xmax_idx, rmin_idx, rmax_idx
+        x_grid = self.pert_field.x_grid
+        r_grid = get_r_grid()
+        x_max_idx = np.where(x_grid <= x_max)[0][-1]
+        x_min_idx = np.where(x_grid >= x_min)[0][0]
+        r_max_idx = np.where(r_grid <= r_max)[0][-1]
+        r_min_idx = np.where(r_grid >= r_min)[0][0]
+        return x_min_idx, x_max_idx, r_min_idx, r_max_idx

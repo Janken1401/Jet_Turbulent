@@ -21,5 +21,6 @@ def get_mach_reference():
         4    5  0.98544
     """
     mach_df = pd.read_csv(path_mach, delimiter=r'\s+', header=None, names=['ID', 'Ma'])
+    mach_df.set_index('ID', inplace=True)
 
     return mach_df

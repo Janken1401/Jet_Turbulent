@@ -1,9 +1,6 @@
-import numpy as np
 import pandas as pd
 
-from src.ReadData.read_mach import get_mach_reference
 from src.toolbox.path_directories import DIR_DATA
-from src.toolbox.dimless_reference_values import gamma, R
 
 path_info = DIR_DATA / 'info.dat'
 
@@ -26,29 +23,11 @@ def get_reference_values():
 
     # Used read_csv instead with space delimiter instead of read_fwf in case
     # of floating inconsistency.
-    return pd.read_csv(path_info,
+    with open(path_info, "r") as file:
+        header = file.readline().strip("# ").split()
+
+    df = pd.read_csv(path_info,
                        delimiter=r'\s+',
-                       skiprows=1,
-                       names=["ux", "rho", "T", "P"])
-
-
-def compare_mach():
-    """
-    Compare the reference Mach number with the Mach number computed
-    with the reference values for the RANS cases
-    Returns
-    -------
-    DataFrame
-        a DataFrame with the relative error for each Mach number
-
-    """
-
-    ref_values = get_reference_values()
-    ref_values['Ma'] = ref_values['ux'] / np.sqrt(gamma * R * ref_values['T'])
-    Mach_ref = get_mach_reference()
-    error = 100 * np.abs(ref_values['Ma'] - Mach_ref['Ma']) / Mach_ref['Ma']
-
-    return error
-
-
-error = compare_mach()
+                       comment='#', names=header, skiprows=1)
+    df.index = df.index + 1
+    return df

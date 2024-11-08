@@ -50,6 +50,7 @@ class Stability:
 
           # Initialize dictionary to hold each quantity as a DataFrame
         perturbation_dict = {quantity: data[quantity] for quantity in self.stability_names[1: ]}
+        return perturbation_dict
 
 
 

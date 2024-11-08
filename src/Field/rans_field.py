@@ -1,16 +1,12 @@
-import numpy as np
 import pandas as pd
-from scipy.interpolate import CubicSpline
 from scipy.io import loadmat
 
 from ReadData.read_info import get_reference_values
-from ReadData.read_radius import get_r_grid
 from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
 from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
 
 
 class RansField:
-    quantities = ['rho', 'ux', 'ur', 'ut', 'T', 'p']
 
     def __init__(self, ID_MACH=1):
         """
@@ -19,73 +15,16 @@ class RansField:
         ID_MACH : int
             ID of the Mach reference
         """
-        self.r = get_r_grid()
-        if not isinstance(ID_MACH, int):
-            raise TypeError('ID_MACH must be a int')
+        self.values = None
+        self.x = None
+        if not isinstance(ID_MACH, int) and ID_MACH <= 0:
+            raise TypeError('ID_MACH must be a positive integer')
 
         self.ID_MACH = ID_MACH
-        self.values = self.get_rans_values()
-        self.get_rans_values()
+        self.__get_rans_values()
 
-    def interpolate(self, x_grid) :
-        """
-        Interpolate the RANS values to the PSE grid and update the RANS values directly.
-
-        Parameters
-        ----------
-        x_grid: np.ndarray
-            The grid of x values for interpolation.
-.
-        """
-        # if not isinstance(x_grid, pd.DataFrame):
-        #     raise TypeError('x_grid must be a np.ndarray')
-        # if np.shape(x_grid)[0] <= np.shape(self.values['x'])[0]:
-        #     raise ValueError('Values must be interpolated into a larger grid')
-        # if np.shape(x_grid)[1] != np.shape(self.values['x'])[1]:
-        #     raise ValueError('the grid along r must have the same size')
-
-        rans_interpolated = {}
-        r_grid = get_r_grid()
-        for value in self.quantities: #skip x and r
-            field = np.zeros((len(x_grid), len(r_grid)))
-
-            for i, r_val in enumerate(r_grid):
-                rans_values_at_r = self.values[value].iloc[:, i]
-
-                cs = CubicSpline(self.x, rans_values_at_r)
-
-                field[:, i] = cs(x_grid)
-
-            rans_interpolated[value] = pd.DataFrame(field)
-
-        self.interpolated_values = rans_interpolated
-
-
-
-    def convert_to_pse_reference(self):
-        """
-        Set the dimensionized RANS into the PSE reference system
-
-        Returns
-        -------
-        rans_pse: dict
-            contains DataFrame of the rans field in PSE reference system
-        """
-        ref_values = get_reference_values().iloc[self.ID_MACH - 1]
-        u_ref = ref_values['ux']
-        rans_dim = self.dimensionalized()
-        rans_pse = {
-                'ux': rans_dim['ux'] / u_ref,
-                'ur': rans_dim['ur'] / u_ref,
-                'ut': rans_dim['ut'] / u_ref,
-                'T': rans_dim['T'] / ref_values['T'],
-                'p': rans_dim['p'] / ref_values['P'],
-                'rho': rans_dim['rho'] / ref_values['rho']
-        }
-
-        return rans_pse
-
-    def dimensionalized(self):
+    @staticmethod
+    def dimensionalized(dimless_field):
         """
         Re-dimensionalize the RANS field before set it to the PSE reference
 
@@ -94,19 +33,18 @@ class RansField:
         rans_dim : dict
             contains DataFrame of the rans field except for x and r
         """
-        rans_values = self.get_rans_values()
         rans_dim = {
-                'ux': rans_values['ux'] * c_0,
-                'ur': rans_values['ur'] * c_0,
-                'ut': rans_values['ut'] * c_0,
-                'T': rans_values['T'] * (gamma - 1) * T_0,
-                'p': rans_values['p'] * gamma * p_0,
-                'rho': rans_values['rho'] * rho_0
+                'ux': dimless_field['ux'] * c_0,
+                'ur': dimless_field['ur'] * c_0,
+                'ut': dimless_field['ut'] * c_0,
+                'T': dimless_field['T'] * (gamma - 1) * T_0,
+                'p': dimless_field['p'] * gamma * p_0,
+                'rho': dimless_field['rho'] * rho_0
         }
 
         return rans_dim
 
-    def get_rans_values(self):
+    def __get_rans_values(self) -> None:
         """
         Retrieve values of the RANS mean field based on the mach case selected
 
@@ -114,9 +52,15 @@ class RansField:
         -------
         Dict: a dict containing DataFrame for each value computed in the RANS field
         """
+        rans_quantities = ['rho', 'ux', 'ur', 'ut', 'T', 'p']
+
         rans_file = DIR_MEAN / RANS_FILES[self.ID_MACH]
-        rans_field_array = loadmat(rans_file)['arr']
-        Nx, Nr, Nvalues = rans_field_array.shape  # 536, 69, 8
+        if rans_file.exists():
+            rans_field_array = loadmat(rans_file)['arr']
+        else:
+            raise ValueError('mat file not found - The case you have entered might not be available')
+
+        nx, nr, nvalues = rans_field_array.shape  # 536, 69, 8
         self.x = rans_field_array[:, 0, 0]
-        self.values = {name: pd.DataFrame(rans_field_array[:, :, i+2], index=range(Nx), columns=range(Nr))
-                for i, name in enumerate(self.quantities)}
+        self.values = {name: pd.DataFrame(rans_field_array[:, :, i + 2], index=range(nx), columns=range(nr))
+                       for i, name in enumerate(rans_quantities)}
