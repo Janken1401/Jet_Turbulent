@@ -1,14 +1,15 @@
 import pandas as pd
 from scipy.io import loadmat
 
-from ReadData.read_info import get_reference_values
-from src.toolbox.path_directories import DIR_MEAN, RANS_FILES
-from src.toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
+from toolbox.path_directories import DIR_MEAN, RANS_FILES
+from toolbox.dimless_reference_values import gamma, rho_0, c_0, T_0, p_0
 
 
 class RansField:
 
-    def __init__(self, ID_MACH=1):
+    quantities = ['rho', 'ux', 'ur', 'ut', 'p', 'T']
+
+    def __init__(self, ID_MACH):
         """
         Parameters
         ----------
@@ -24,23 +25,37 @@ class RansField:
         self.__get_rans_values()
 
     @staticmethod
-    def dimensionalized(dimless_field):
+    def dimensionalized(dimless_field: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         """
-        Re-dimensionalize the RANS field before set it to the PSE reference
+        Re-dimensionalize the RANS field based on PSE reference values.
+
+        Parameters
+        ----------
+        dimless_field : dict
+            Dictionary containing dimensionless values for each field quantity.
 
         Returns
         -------
-        rans_dim : dict
-            contains DataFrame of the rans field except for x and r
+        dict
+            Dictionary of DataFrames with dimensionalized RANS field values, except for 'x' and 'r'.
         """
-        rans_dim = {
-                'ux': dimless_field['ux'] * c_0,
-                'ur': dimless_field['ur'] * c_0,
-                'ut': dimless_field['ut'] * c_0,
-                'T': dimless_field['T'] * (gamma - 1) * T_0,
-                'p': dimless_field['p'] * gamma * p_0,
-                'rho': dimless_field['rho'] * rho_0
+        # Define conversion factors for each field, skipping x and r
+        conversion_factors = {
+                'ux': c_0,
+                'ur': c_0,
+                'ut': c_0,
+                'T': (gamma - 1) * T_0,
+                'p': gamma * p_0,
+                'rho': rho_0
         }
+
+        rans_dim = {}
+
+        for field, factor in conversion_factors.items():
+            if field in dimless_field:
+                rans_dim[field] = dimless_field[field] * factor
+            else:
+                print(f"Warning: '{field}' is missing in dimless_field, skipping dimensionalization.")
 
         return rans_dim
 

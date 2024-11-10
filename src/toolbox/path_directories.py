@@ -9,5 +9,5 @@ DIR_STABILITY = DIR_DATA / 'Stability'
 DIR_STABILITY_ALPHA = DIR_STABILITY / 'alpha'
 DIR_OUT = BASE_DIR / 'Output'
 
-CASE_NUMBER = 10
+CASE_NUMBER = (len(list(DIR_MEAN.glob('*'))))
 RANS_FILES = {i: f'mean_{i}.mat' for i in range(1,CASE_NUMBER+1)}
