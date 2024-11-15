@@ -311,22 +311,22 @@ class PostProcess:
         Get the formatted title for a specific field and value name.
         """
         titles = {
-                'total': {
-                        'ux': r"$\tilde{U}_x$", 'ur': r"$\tilde{U}_r$", 'ut': r"$\tilde{U}_\theta$",
-                        'rho': r"$\tilde{\rho}$", 'p': r"$\tilde{p}$", 'T': r"$\tilde{T}$"
-                },
-                'rans': {
-                        'ux': r"$U_x$", 'ur': r"$U_r$", 'ut': r"$U_\theta$", 'rho': r"$\rho$",
-                        'p': r"$p$", 'T': r"$T$"
-                },
-                'pse': {
-                        'Re(ux)': r"$\Re(u_x')$", 'Im(ux)': r"$\Im(u_x')$", 'abs(ux)': r"$|u_x'|$",
-                        'Re(ur)': r"$\Re(u_r')$", 'Im(ur)': r"$\Im(u_r')$", 'abs(ur)': r"$|u_r'|$",
-                        'Re(ut)': r"$\Re(u_\theta')$", 'Im(ut)': r"$\Im(u_\theta')$", 'abs(ut)': r"$|u_\theta'|$",
-                        'Re(rho)': r"$\Re(\rho')$", 'Im(rho)': r"$\Im(\rho')$", 'abs(rho)': r"$|\rho'|$",
-                        'Re(p)': r"$\Re(p')$", 'Im(p)': r"$\Im(p')$", 'abs(p)': r"$|p'|$",
-                        'Re(T)': r"$\Re(T')$", 'Im(T)': r"$\Im(T')$", 'abs(T)': r"$|T'|$"
-                }
+            'total': {
+                'ux': r"$\tilde{U}_x$", 'ur': r"$\tilde{U}_r$", 'ut': r"$\tilde{U}_\theta$",
+                'rho': r"$\tilde{\rho}$", 'p': r"$\tilde{p}$", 'T': r"$\tilde{T}$"
+            },
+            'rans': {
+                'ux': r"$U_x$", 'ur': r"$U_r$", 'ut': r"$U_\theta$", 'rho': r"$\rho$",
+                'p': r"$p$", 'T': r"$T$"
+            },
+            'pse': {
+                'Re(ux)': r"$\Re(u_x')$", 'Im(ux)': r"$\Im(u_x')$", 'abs(ux)': r"$|u_x'|$",
+                'Re(ur)': r"$\Re(u_r')$", 'Im(ur)': r"$\Im(u_r')$", 'abs(ur)': r"$|u_r'|$",
+                'Re(ut)': r"$\Re(u_\theta')$", 'Im(ut)': r"$\Im(u_\theta')$", 'abs(ut)': r"$|u_\theta'|$",
+                'Re(rho)': r"$\Re(\rho')$", 'Im(rho)': r"$\Im(\rho')$", 'abs(rho)': r"$|\rho'|$",
+                'Re(p)': r"$\Re(p')$", 'Im(p)': r"$\Im(p')$", 'abs(p)': r"$|p'|$",
+                'Re(T)': r"$\Re(T')$", 'Im(T)': r"$\Im(T')$", 'abs(T)': r"$|T'|$"
+            }
         }
         return titles[field][name_value]
 
@@ -375,12 +375,6 @@ class PostProcess:
             raise ValueError(f"x_max must be greater than or equal to {max_of_x}")
         if r_min > max_of_r:
             raise ValueError(f"r_max must be greater than or equal to {max_of_r}")
-
-    def export_value(self, field: str, name_value: str):
-        value = self.__get_field(name_value, field)
-        scipy.io.savemat(DIR_OUT / f'Case_{self.ID_MACH}'
-                         / "St{:02d}".format(int(10 * self.St))
-                         / name_value, {'struct': value.to_numpy()})
 
     def __get_field(self, name_value, field):
         """

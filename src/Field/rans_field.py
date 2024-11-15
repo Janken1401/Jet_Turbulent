@@ -86,11 +86,11 @@ class RansField:
 
         ref_values = get_reference_values(ID_MACH)
         scaling_factors = {
-                'ux': ref_values['ux'],
-                'ur': ref_values['ux'],
-                'ut': ref_values['ux'],
-                'p': ref_values['rho'] * (ref_values['ux'] ** 2),
-                'rho': ref_values['rho']
+            'ux': ref_values['ux'],
+            'ur': ref_values['ux'],
+            'ut': ref_values['ux'],
+            'p': ref_values['rho'] * (ref_values['ux'] ** 2),
+            'rho': ref_values['rho']
         }
         dim_field = RansField.dimensionalized(dimless_field)
         rans_pse = {}
@@ -131,12 +131,12 @@ class RansField:
         If a field in `quantities` is missing from `dimless_field`, a warning is printed and it is skipped.
         """
         conversion_factors = {
-                'ux': c_0,
-                'ur': c_0,
-                'ut': c_0,
-                'T': (gamma - 1) * T_0,
-                'p': gamma * p_0,
-                'rho': rho_0
+            'ux': c_0,
+            'ur': c_0,
+            'ut': c_0,
+            'T': (gamma - 1) * T_0,
+            'p': gamma * p_0,
+            'rho': rho_0
         }
 
         rans_dim = {}

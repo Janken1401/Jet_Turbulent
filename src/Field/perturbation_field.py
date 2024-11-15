@@ -2,7 +2,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
 from scipy.interpolate import CubicSpline
 
 from src.ReadData.read_radius import get_r_grid
@@ -100,7 +99,7 @@ class PerturbationField:
         self.St = St
         self.ID_MACH = ID_MACH
         self.__get_raw_perturbation_values()
-        self.rans_values = RansField.convert_to_pse_ref(self.interpolate(), self.ID_MACH)
+        self.rans_values = self.interpolate()
 
     def compute_total_field(self, t: Union[int, float] = 0, epsilon_q: Union[int, float] = 0.01):
         """
@@ -171,11 +170,11 @@ class PerturbationField:
         time_multiplier = np.exp(-theta_imag) * np.exp(1j * (theta_real - (self.St * t)))
 
         rans_pse_quantities = {
-                rans_quantity: [
-                        pse_quantity for pse_quantity in self.pse_quantities[2:]
-                        if rans_quantity in pse_quantity and 'abs' not in pse_quantity
-                ]
-                for rans_quantity in self.rans_quantities
+            rans_quantity: [
+                pse_quantity for pse_quantity in self.pse_quantities[2:]
+                if rans_quantity in pse_quantity and 'abs' not in pse_quantity
+            ]
+            for rans_quantity in self.rans_quantities
         }
 
         q_prime = {}
@@ -208,20 +207,20 @@ class PerturbationField:
             Converted field values scaled to the RANS reference system.
         """
         conversion_factors = {
-                'ux': c_0,
-                'ur': c_0,
-                'ut': c_0,
-                'p': gamma * p_0,
-                'rho': rho_0
+            'ux': c_0,
+            'ur': c_0,
+            'ut': c_0,
+            'p': gamma * p_0,
+            'rho': rho_0
         }
 
         ref_values = get_reference_values(ID_MACH)
         scaling_factors = {
-                'ux': ref_values['ux'],
-                'ur': ref_values['ux'],
-                'ut': ref_values['ux'],
-                'p': ref_values['rho'] * (ref_values['ux'] ** 2),
-                'rho': ref_values['rho']
+            'ux': ref_values['ux'],
+            'ur': ref_values['ux'],
+            'ut': ref_values['ux'],
+            'p': ref_values['rho'] * (ref_values['ux'] ** 2),
+            'rho': ref_values['rho']
         }
 
         pse_to_rans = {}
@@ -241,10 +240,6 @@ class PerturbationField:
         that the r-grid is the same for both grid.
         If it is not the case, please use the scipy.interpolate.griddata.
         For these data, the expected result is that each 5-ith row in the RANS grid must match the i-th row in PSE grid
-        Hence , a test case for St = 0.4 and Case 1 has been conducted for ux resulting in a
-        Mismatch at x_rans=505, x_pse=101, r_idx=0
-        RANS Value: 0.5338967816273286, Interpolated Value: 0.5352458183174091
-        which is a 0.001349036690080574 difference
 
         Returns
         -------
@@ -287,10 +282,10 @@ class PerturbationField:
         file_perturbation = self.__find_file(dir_field)
 
         full_data = pd.read_csv(
-                file_perturbation,
-                delimiter=r'\s+',
-                skiprows=3,
-                names=self.pse_quantities,
+            file_perturbation,
+            delimiter=r'\s+',
+            skiprows=3,
+            names=self.pse_quantities,
         )
 
         x_values = full_data['x'].unique()
@@ -307,7 +302,7 @@ class PerturbationField:
         self.values = perturbation_dict
         self.x_grid = x_values
 
-    def get_stability_data(self) -> DataFrame:
+    def get_stability_data(self) -> pd.DataFrame:
         """
         Loads stability field data, containing values such as real and imaginary parts of `alpha`.
 
