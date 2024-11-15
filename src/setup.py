@@ -1,13 +1,13 @@
 from distutils.core import setup
 
 setup(
-    name='Jet_Turbulent',
+    name='Turbulent_Jet',
+    packages=['toolbox', 'ReadData', 'Field'],
     version='',
-    packages=['toolbox', 'ReadData'],
     package_dir={'': 'src'},
     url='',
     license='',
     author='melti',
-    author_email='',
+    author_email='mel.tiar@univ-tlse3.fr',
     description=''
 )
